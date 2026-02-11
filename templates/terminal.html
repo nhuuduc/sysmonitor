@@ -190,6 +190,74 @@
             animation: fadeIn 0.2s ease;
         }
         
+        /* Mobile Control Bar */
+        .control-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 8px 12px;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            z-index: 100;
+            flex-wrap: wrap;
+        }
+        
+        .control-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px 14px;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 44px;
+            min-height: 44px;
+            transition: all 0.15s ease;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .control-btn:active {
+            background: var(--border-color);
+            transform: scale(0.95);
+        }
+        
+        .control-btn.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            color: white;
+        }
+        
+        .control-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+        
+        .control-group {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-primary);
+            padding: 4px;
+            border-radius: 8px;
+        }
+        
+        .terminal-container {
+            flex: 1;
+            padding: 8px;
+            padding-bottom: 80px;
+            background: var(--bg-primary);
+            overflow: hidden;
+            position: relative;
+        }
+        
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -199,6 +267,12 @@
             .header { padding: 8px 12px; flex-wrap: wrap; }
             .title { order: -1; width: 100%; margin-bottom: 8px; }
             .btn { padding: 6px 10px; font-size: 12px; }
+            .control-btn { padding: 8px 12px; min-width: 40px; min-height: 40px; font-size: 12px; }
+        }
+        
+        @media (min-width: 1024px) {
+            .control-bar { display: none; }
+            .terminal-container { padding-bottom: 8px; }
         }
     </style>
 </head>
@@ -229,6 +303,35 @@
         <div id="terminal"></div>
     </div>
     
+    <!-- Mobile Control Bar -->
+    <div class="control-bar">
+        <button class="control-btn" id="ctrlBtn" onclick="toggleCtrl()">Ctrl</button>
+        <button class="control-btn" onclick="sendKey('\t')">Tab</button>
+        <button class="control-btn" onclick="sendKey('\u001b')">Esc</button>
+        <div class="control-group">
+            <button class="control-btn" onclick="sendKey('\u001b[A')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 19V5M5 12l7-7 7 7"/>
+                </svg>
+            </button>
+            <button class="control-btn" onclick="sendKey('\u001b[B')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12l7 7 7-7"/>
+                </svg>
+            </button>
+            <button class="control-btn" onclick="sendKey('\u001b[D')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <button class="control-btn" onclick="sendKey('\u001b[C')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+    
     <!-- IME Status indicator for Telex/Vietnamese input -->
     <div class="ime-status" id="imeStatus">
         <svg class="icon" viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
@@ -249,6 +352,7 @@
         let currentFontSize = parseInt(localStorage.getItem('terminalFontSize')) || 16;
         let isComposing = false;
         let compositionBuffer = '';
+        let ctrlActive = false;
         
         // Update font size display
         document.getElementById('fontSize').textContent = currentFontSize;
@@ -477,6 +581,35 @@
                 sendResize();
                 term.focus();
             }
+        }
+        
+        // Mobile control functions
+        function toggleCtrl() {
+            ctrlActive = !ctrlActive;
+            const btn = document.getElementById('ctrlBtn');
+            if (ctrlActive) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+            term.focus();
+        }
+        
+        function sendKey(key) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            
+            if (ctrlActive) {
+                // If Ctrl is active, send Ctrl+key combination
+                const ctrlKey = String.fromCharCode(key.charCodeAt(0) & 0x1f);
+                ws.send(new TextEncoder().encode(ctrlKey));
+                // Turn off Ctrl after use
+                ctrlActive = false;
+                document.getElementById('ctrlBtn').classList.remove('active');
+            } else {
+                // Send key normally
+                ws.send(new TextEncoder().encode(key));
+            }
+            term.focus();
         }
         
         // Handle paste events for better Unicode support
