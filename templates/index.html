@@ -411,6 +411,86 @@
             border-radius: 6px;
         }
         
+        /* Modal Editor */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-container {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 900px;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .modal-header {
+            background: #21262d;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid #30363d;
+        }
+        .modal-title {
+            flex: 1;
+            font-family: monospace;
+            font-size: 14px;
+            color: #58a6ff;
+            word-break: break-all;
+        }
+        .modal-close {
+            background: #da3633;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .modal-body {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        .modal-footer {
+            background: #21262d;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #30363d;
+        }
+        .modal-status {
+            font-size: 12px;
+            color: #8b949e;
+        }
+        .modal-status.success { color: #3fb950; }
+        .modal-status.error { color: #f85149; }
+        
+        /* CodeMirror trong modal */
+        .CodeMirror {
+            height: 100% !important;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            background: #0d1117;
+        }
+        
         /* Hide scrollbar */
         ::-webkit-scrollbar { width: 0; height: 0; }
     </style>
@@ -688,12 +768,185 @@
         }
 
         function editFile(path) {
-            window.open(`/editor?path=${encodeURIComponent(path)}`, '_blank');
+            openEditorModal(path);
+        }
+
+        // Modal Editor Functions
+        let codeEditor = null;
+        let currentEditPath = '';
+        let originalEditContent = '';
+        let isEditModified = false;
+
+        function openEditorModal(path) {
+            currentEditPath = path;
+            document.getElementById('editorModal').classList.add('active');
+            document.getElementById('modalTitle').textContent = path;
+            loadFileContent(path);
+        }
+
+        function closeEditorModal() {
+            if (isEditModified) {
+                if (!confirm('You have unsaved changes. Close anyway?')) {
+                    return;
+                }
+            }
+            document.getElementById('editorModal').classList.remove('active');
+            if (codeEditor) {
+                codeEditor.toTextArea();
+                codeEditor = null;
+            }
+            currentEditPath = '';
+            originalEditContent = '';
+            isEditModified = false;
+        }
+
+        async function loadFileContent(path) {
+            document.getElementById('modalStatus').textContent = 'Loading...';
+            try {
+                const response = await fetch(`/api/files/read?path=${encodeURIComponent(path)}`);
+                const data = await response.json();
+                
+                if (data.status === 'error') {
+                    document.getElementById('modalStatus').textContent = 'Error: ' + data.message;
+                    return;
+                }
+                
+                originalEditContent = data.content;
+                initCodeEditor(data.content, path);
+                document.getElementById('modalStatus').textContent = 'Ready';
+            } catch (err) {
+                document.getElementById('modalStatus').textContent = 'Error loading file';
+            }
+        }
+
+        function initCodeEditor(content, filename) {
+            const mode = getEditorMode(filename);
+            
+            codeEditor = CodeMirror(document.getElementById('modalEditor'), {
+                value: content,
+                mode: mode,
+                theme: 'dracula',
+                lineNumbers: true,
+                lineWrapping: true,
+                tabSize: 2,
+                indentWithTabs: false,
+                autoCloseBrackets: true,
+                matchBrackets: true
+            });
+
+            codeEditor.on('change', () => {
+                isEditModified = codeEditor.getValue() !== originalEditContent;
+                updateModalSaveButton();
+            });
+
+            // Keyboard shortcut Ctrl+S
+            codeEditor.setOption('extraKeys', {
+                'Ctrl-S': () => saveModalFile(),
+                'Cmd-S': () => saveModalFile()
+            });
+        }
+
+        function getEditorMode(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const modes = {
+                'js': 'javascript', 'json': 'javascript', 'go': 'go', 'py': 'python',
+                'sql': 'sql', 'xml': 'xml', 'html': 'xml', 'yml': 'yaml', 'yaml': 'yaml',
+                'md': 'markdown', 'sh': 'shell', 'env': 'shell', 'conf': 'nginx',
+                'ini': 'properties', 'toml': 'properties', 'css': 'css'
+            };
+            return modes[ext] || 'text';
+        }
+
+        function updateModalSaveButton() {
+            const btn = document.getElementById('modalSaveBtn');
+            if (isEditModified) {
+                btn.textContent = '💾 Save *';
+                btn.style.opacity = '1';
+            } else {
+                btn.textContent = '💾 Save';
+                btn.style.opacity = '0.6';
+            }
+        }
+
+        async function saveModalFile() {
+            if (!codeEditor || !isEditModified) return;
+            
+            const btn = document.getElementById('modalSaveBtn');
+            btn.disabled = true;
+            document.getElementById('modalStatus').textContent = 'Saving...';
+            
+            try {
+                const response = await fetch('/api/files/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        path: currentEditPath,
+                        content: codeEditor.getValue()
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    originalEditContent = codeEditor.getValue();
+                    isEditModified = false;
+                    updateModalSaveButton();
+                    document.getElementById('modalStatus').textContent = 'Saved!';
+                    document.getElementById('modalStatus').classList.add('success');
+                    setTimeout(() => {
+                        document.getElementById('modalStatus').textContent = 'Ready';
+                        document.getElementById('modalStatus').classList.remove('success');
+                    }, 2000);
+                } else {
+                    document.getElementById('modalStatus').textContent = 'Error: ' + data.message;
+                    document.getElementById('modalStatus').classList.add('error');
+                }
+            } catch (err) {
+                document.getElementById('modalStatus').textContent = 'Save failed';
+                document.getElementById('modalStatus').classList.add('error');
+            } finally {
+                btn.disabled = false;
+            }
         }
 
         refreshAll();
         setInterval(loadSystem, 3000);
         setInterval(loadProcesses, 8000);
     </script>
-</body>
+    </div>
+
+    <!-- Editor Modal -->
+    <div class="modal-overlay" id="editorModal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <span class="modal-title" id="modalTitle">editor</span>
+                <button class="modal-close" onclick="closeEditorModal()">✕ Close</button>
+            </div>
+            <div class="modal-body" id="modalEditor"></div>
+            <div class="modal-footer">
+                <span class="modal-status" id="modalStatus">Ready</span>
+                <button class="btn btn-save" id="modalSaveBtn" onclick="saveModalFile()" disabled>💾 Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CodeMirror -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/yaml/yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/shell/shell.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/go/go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/sql/sql.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/markdown/markdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/nginx/nginx.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/properties/properties.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script>
+
+    <script></body>
 </html>
