@@ -793,7 +793,7 @@
         <div class="tab-pane" id="files">
             <div class="section-title">File Manager</div>
             <div class="file-toolbar">
-                <input type="text" class="search-box" id="current-path" value="/root" readonly>
+                <input type="text" class="search-box" id="current-path" value="/root" placeholder="Enter path..." onkeypress="handlePathInput(event)">
                 <button class="btn-action" onclick="parentDir()"><i class="bi bi-arrow-up"></i> Up</button>
                 <button class="btn-action" onclick="refreshFiles()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
             </div>
@@ -1006,6 +1006,16 @@
             loadFiles();
         }
 
+        function handlePathInput(event) {
+            if (event.key === 'Enter') {
+                const path = document.getElementById('current-path').value.trim();
+                if (path) {
+                    currentPath = path;
+                    loadFiles();
+                }
+            }
+        }
+
         function parentDir() {
             if (currentPath === '/') return;
             const parent = currentPath.split('/').slice(0, -1).join('/') || '/';
@@ -1069,8 +1079,24 @@
 
         function openEditorModal(path) {
             currentEditPath = path;
+            
+            // Clear previous editor if exists
+            if (codeEditor) {
+                codeEditor.toTextArea();
+                codeEditor = null;
+            }
+            // Clear modal editor container
+            document.getElementById('modalEditor').innerHTML = '';
+            
+            // Reset state
+            originalEditContent = '';
+            isEditModified = false;
+            
             document.getElementById('editorModal').classList.add('active');
             document.getElementById('modalTitle').textContent = path;
+            document.getElementById('modalStatus').textContent = 'Loading...';
+            document.getElementById('modalSaveBtn').disabled = true;
+            
             loadFileContent(path);
         }
 
