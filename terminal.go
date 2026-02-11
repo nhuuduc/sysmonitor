@@ -43,6 +43,9 @@ func terminalHandler(w http.ResponseWriter, r *http.Request) {
 	cmd.Env = append(os.Environ(),
 		"TERM=xterm-256color",
 		"COLORTERM=truecolor",
+		"LANG=en_US.UTF-8",
+		"LC_ALL=en_US.UTF-8",
+		"LC_CTYPE=UTF-8",
 	)
 
 	ptyFile, err := pty.Start(cmd)

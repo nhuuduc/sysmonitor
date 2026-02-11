@@ -5,13 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Terminal - SysMonitor</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border-color: #30363d;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent-green: #3fb950;
+            --accent-red: #da3633;
+            --accent-blue: #58a6ff;
+        }
+        
         body {
-            background: #0d1117;
-            color: #c9d1d9;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             height: 100vh;
             display: flex;
@@ -20,8 +32,8 @@
         }
         
         .header {
-            background: #161b22;
-            border-bottom: 1px solid #30363d;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
             padding: 10px 16px;
             display: flex;
             align-items: center;
@@ -43,15 +55,15 @@
         }
         
         .btn-back {
-            background: #21262d;
-            color: #c9d1d9;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
         }
-        .btn-back:hover { background: #30363d; }
+        .btn-back:hover { background: var(--border-color); }
         
         .title {
             flex: 1;
             font-weight: 600;
-            color: #3fb950;
+            color: var(--accent-green);
             display: flex;
             align-items: center;
             gap: 8px;
@@ -61,17 +73,17 @@
             font-size: 12px;
             padding: 4px 10px;
             border-radius: 12px;
-            background: #21262d;
-            color: #8b949e;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
         }
         .status.connected { background: #238636; color: white; }
-        .status.disconnected { background: #da3633; color: white; }
+        .status.disconnected { background: var(--accent-red); color: white; }
         
         .font-controls {
             display: flex;
             align-items: center;
             gap: 4px;
-            background: #21262d;
+            background: var(--bg-tertiary);
             padding: 4px 8px;
             border-radius: 6px;
         }
@@ -79,16 +91,27 @@
         .font-btn {
             background: transparent;
             border: none;
-            color: #8b949e;
+            color: var(--text-secondary);
             padding: 4px 8px;
             cursor: pointer;
             font-size: 14px;
             border-radius: 4px;
         }
-        .font-btn:hover { background: #30363d; color: #c9d1d9; }
+        .font-btn:hover { background: var(--border-color); color: var(--text-primary); }
+        
+        .icon {
+            display: inline-block;
+            vertical-align: middle;
+            flex-shrink: 0;
+        }
+        
+        .title-icon {
+            width: 20px;
+            height: 20px;
+        }
         
         .font-size {
-            color: #58a6ff;
+            color: var(--accent-blue);
             font-size: 12px;
             min-width: 35px;
             text-align: center;
@@ -97,8 +120,9 @@
         .terminal-container {
             flex: 1;
             padding: 8px;
-            background: #0d1117;
+            background: var(--bg-primary);
             overflow: hidden;
+            position: relative;
         }
         
         #terminal {
@@ -115,12 +139,28 @@
             overflow-y: auto !important;
         }
         
+        /* IME Input styling for Telex */
+        .xterm .xterm-helper-textarea {
+            position: absolute;
+            opacity: 0;
+            left: -9999em;
+            top: 0;
+            width: 0;
+            height: 0;
+            z-index: -9999;
+            white-space: pre;
+            word-wrap: normal;
+            overflow: hidden;
+            /* Important for Telex/Vietnamese input */
+            font-family: 'JetBrains Mono', 'Noto Sans Mono', monospace !important;
+        }
+        
         /* Scrollbar styling */
         .xterm-viewport::-webkit-scrollbar {
             width: 10px;
         }
         .xterm-viewport::-webkit-scrollbar-track {
-            background: #21262d;
+            background: var(--bg-tertiary);
         }
         .xterm-viewport::-webkit-scrollbar-thumb {
             background: #484f58;
@@ -128,6 +168,31 @@
         }
         .xterm-viewport::-webkit-scrollbar-thumb:hover {
             background: #6e7681;
+        }
+        
+        /* IME composition styling */
+        .ime-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: none;
+            z-index: 1000;
+        }
+        
+        .ime-status.active {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         @media (max-width: 768px) {
@@ -139,9 +204,17 @@
 </head>
 <body>
     <div class="header">
-        <a href="/" class="btn btn-back">🔙 Dashboard</a>
+        <a href="/" class="btn btn-back">
+            <svg class="icon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+                <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+            </svg>
+            Dashboard
+        </a>
         <div class="title">
-            <span>🖥️</span>
+            <svg class="icon title-icon" viewBox="0 0 16 16" width="20" height="20" fill="currentColor">
+                <path d="M11 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h6zM5 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H5z"/>
+                <path d="M8 14a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+            </svg>
             <span>Terminal</span>
         </div>
         <div class="font-controls">
@@ -155,6 +228,15 @@
     <div class="terminal-container">
         <div id="terminal"></div>
     </div>
+    
+    <!-- IME Status indicator for Telex/Vietnamese input -->
+    <div class="ime-status" id="imeStatus">
+        <svg class="icon" viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
+            <path d="M14 5a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1zm-4 0a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1zm-4 0a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1z"/>
+            <path d="M0 3a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2.5a.5.5 0 0 0 0 1H13a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h1.5a.5.5 0 0 0 0-1H2a2 2 0 0 1-2-2V3zm2-1a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H2z"/>
+        </svg>
+        Typing...
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
@@ -165,6 +247,8 @@
         let ws = null;
         let fitAddon = null;
         let currentFontSize = parseInt(localStorage.getItem('terminalFontSize')) || 16;
+        let isComposing = false;
+        let compositionBuffer = '';
         
         // Update font size display
         document.getElementById('fontSize').textContent = currentFontSize;
@@ -174,12 +258,24 @@
                 cursorBlink: true,
                 cursorStyle: 'bar',
                 fontSize: currentFontSize,
-                fontFamily: '"JetBrains Mono", "Fira Code", "SF Mono", Monaco, "Cascadia Code", Consolas, monospace',
+                // Use Noto Sans Mono for better Vietnamese character support
+                fontFamily: '"Noto Sans Mono", "JetBrains Mono", "Fira Code", "SF Mono", Monaco, monospace',
                 fontWeight: '400',
                 fontWeightBold: '500',
                 letterSpacing: 0,
                 lineHeight: 1.2,
                 scrollback: 5000,
+                // IME/Unicode settings for Telex support
+                allowProposedApi: true,
+                unicodeVersion: '11',
+                convertEol: true,
+                tabStopWidth: 4,
+                // Screen reader support helps with IME
+                screenReaderMode: false,
+                // Disable bell for better IME experience
+                bellStyle: 'none',
+                // Enable Windows mode for better compatibility
+                windowsMode: false,
                 theme: {
                     background: '#0d1117',
                     foreground: '#c9d1d9',
@@ -223,15 +319,107 @@
                 sendResize();
             });
             
-            // Handle input
+            // Setup IME handling for Telex/Vietnamese input
+            setupIMEHandling();
+            
+            // Handle input with IME awareness
             term.onData(data => {
                 if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(data);
+                    // Don't send data during composition - let IME handle it
+                    if (!isComposing) {
+                        ws.send(data);
+                    }
                 }
             });
             
             // Focus terminal
             term.focus();
+            
+            // Setup composition event listeners on the textarea
+            setupCompositionListeners();
+        }
+        
+        function setupIMEHandling() {
+            // Get the textarea element that xterm uses for input
+            const textarea = term.textarea;
+            if (!textarea) {
+                // Retry after a short delay if textarea not ready
+                setTimeout(setupIMEHandling, 100);
+                return;
+            }
+            
+            // Enable composition events
+            textarea.addEventListener('compositionstart', onCompositionStart);
+            textarea.addEventListener('compositionupdate', onCompositionUpdate);
+            textarea.addEventListener('compositionend', onCompositionEnd);
+            
+            // Handle input event for immediate character processing
+            textarea.addEventListener('input', onInput);
+            
+            // Set proper attributes for IME
+            textarea.setAttribute('autocapitalize', 'off');
+            textarea.setAttribute('autocomplete', 'off');
+            textarea.setAttribute('autocorrect', 'off');
+            textarea.setAttribute('spellcheck', 'false');
+            textarea.setAttribute('inputmode', 'text');
+        }
+        
+        function setupCompositionListeners() {
+            // Alternative method: poll for textarea if not immediately available
+            const checkTextarea = setInterval(() => {
+                if (term.textarea) {
+                    clearInterval(checkTextarea);
+                    setupIMEHandling();
+                }
+            }, 50);
+            
+            // Stop checking after 5 seconds
+            setTimeout(() => clearInterval(checkTextarea), 5000);
+        }
+        
+        function onCompositionStart(e) {
+            isComposing = true;
+            compositionBuffer = '';
+            showIMEStatus(true);
+            console.log('IME Composition started');
+        }
+        
+        function onCompositionUpdate(e) {
+            if (e.data) {
+                compositionBuffer = e.data;
+            }
+        }
+        
+        function onCompositionEnd(e) {
+            isComposing = false;
+            showIMEStatus(false);
+            
+            // Send the final composed text
+            if (e.data && ws && ws.readyState === WebSocket.OPEN) {
+                // Convert to UTF-8 bytes and send
+                const encoder = new TextEncoder();
+                const bytes = encoder.encode(e.data);
+                ws.send(bytes);
+            }
+            
+            compositionBuffer = '';
+            console.log('IME Composition ended:', e.data);
+        }
+        
+        function onInput(e) {
+            // Handle normal input (non-composition)
+            if (!isComposing && e.data) {
+                // Input event fired outside of composition (e.g., direct keypress)
+            }
+        }
+        
+        function showIMEStatus(show) {
+            const status = document.getElementById('imeStatus');
+            if (show) {
+                status.classList.add('active');
+            } else {
+                status.classList.remove('active');
+            }
         }
         
         function connectWebSocket() {
@@ -287,11 +475,27 @@
                 term.options.fontSize = currentFontSize;
                 fitAddon.fit();
                 sendResize();
+                term.focus();
             }
         }
         
+        // Handle paste events for better Unicode support
+        document.addEventListener('paste', (e) => {
+            if (term && document.activeElement === term.textarea) {
+                e.preventDefault();
+                const text = e.clipboardData.getData('text');
+                if (text && ws && ws.readyState === WebSocket.OPEN) {
+                    const encoder = new TextEncoder();
+                    ws.send(encoder.encode(text));
+                }
+            }
+        });
+        
         // Initialize on load
         initTerminal();
+        
+        // Re-setup IME handling after a short delay to ensure xterm is fully initialized
+        setTimeout(setupIMEHandling, 500);
     </script>
 </body>
 </html>

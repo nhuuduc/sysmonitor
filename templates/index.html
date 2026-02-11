@@ -4,13 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SysMonitor Pro</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         
+        /* ========== CSS VARIABLES ========== */
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border-color: #30363d;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --accent-blue: #58a6ff;
+            --accent-purple: #a371f7;
+            --accent-orange: #f0883e;
+            --accent-green: #3fb950;
+            --accent-red: #da3633;
+            --accent-red-hover: #b02a26;
+            --shadow-glow: 0 4px 12px rgba(88, 166, 255, 0.3);
+            --transition-fast: 0.15s ease;
+            --transition-normal: 0.25s ease;
+            --transition-slow: 0.35s ease;
+        }
+        
         body {
-            background: #0d1117;
+            background: var(--bg-primary);
             color: #fff;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             min-height: 100vh;
@@ -18,9 +38,71 @@
             overflow-x: hidden;
         }
         
-        /* Navbar */
+        /* ========== SVG ICON UTILITIES ========== */
+        .icon {
+            width: 1em;
+            height: 1em;
+            display: inline-block;
+            vertical-align: middle;
+            fill: currentColor;
+            flex-shrink: 0;
+        }
+        
+        .icon[stroke] {
+            fill: none;
+            stroke: currentColor;
+        }
+        
+        .icon-sm { width: 14px; height: 14px; }
+        .icon-md { width: 18px; height: 18px; }
+        .icon-lg { width: 22px; height: 22px; }
+        .icon-xl { width: 28px; height: 28px; }
+        
+        /* ========== ANIMATIONS ========== */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: scale(0.95) translateY(-20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        
+        .animate-fadeIn { animation: fadeIn 0.3s ease forwards; }
+        .animate-slideIn { animation: slideInRight 0.3s ease forwards; }
+        .animate-pulse { animation: pulse 2s ease-in-out infinite; }
+        .animate-spin { animation: spin 1s linear infinite; }
+        .animate-scaleIn { animation: scaleIn 0.25s ease forwards; }
+        
+        /* ========== NAVBAR ========== */
         .navbar {
-            background: #161b22;
+            background: var(--bg-secondary);
             padding: 14px 16px;
             display: flex;
             justify-content: space-between;
@@ -28,30 +110,62 @@
             position: sticky;
             top: 0;
             z-index: 100;
-            border-bottom: 1px solid #30363d;
+            border-bottom: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
         }
         
         .navbar-brand {
             font-weight: 700;
             font-size: 1.1rem;
-            color: #58a6ff;
+            color: var(--accent-blue);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .navbar-brand .icon {
+            width: 22px;
+            height: 22px;
         }
         
         .live-time {
             font-size: 0.85rem;
-            color: #8b949e;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
         
         .status-dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: #3fb950;
+            background: var(--accent-green);
             display: inline-block;
-            margin-right: 6px;
+            box-shadow: 0 0 8px var(--accent-green);
+            animation: pulse 2s ease-in-out infinite;
         }
         
-        /* Stats Grid */
+        .navbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .navbar-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: opacity var(--transition-fast);
+        }
+        
+        .navbar-link:hover { opacity: 0.8; }
+        .navbar-link.terminal { color: var(--accent-green); }
+        .navbar-link.logout { color: var(--accent-red); }
+        
+        /* ========== STATS GRID ========== */
         .stats-container {
             padding: 12px;
         }
@@ -63,113 +177,185 @@
         }
         
         .stat-card {
-            background: #161b22;
-            border: 1px solid #30363d;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 16px;
             text-align: center;
+            transition: all var(--transition-fast);
+            position: relative;
+            overflow: hidden;
         }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, currentColor, transparent);
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: currentColor;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        
+        .stat-card:hover::before { opacity: 0.5; }
         
         .stat-icon {
-            font-size: 1.4rem;
+            width: 32px;
+            height: 32px;
             margin-bottom: 8px;
+            transition: transform var(--transition-fast);
         }
         
-        .stat-icon.cpu { color: #58a6ff; }
-        .stat-icon.mem { color: #a371f7; }
-        .stat-icon.disk { color: #f0883e; }
-        .stat-icon.time { color: #3fb950; }
+        .stat-icon[stroke] {
+            stroke-width: 1.5;
+        }
+        
+        .stat-card:hover .stat-icon { transform: scale(1.1); }
+        
+        .stat-icon.cpu { color: var(--accent-blue); }
+        .stat-icon.mem { color: var(--accent-purple); }
+        .stat-icon.disk { color: var(--accent-orange); }
+        .stat-icon.time { color: var(--accent-green); }
         
         .stat-value {
             font-size: 1.8rem;
             font-weight: 700;
-            color: #58a6ff;
+            color: var(--accent-blue);
+            transition: all var(--transition-fast);
         }
         
-        .stat-value.mem { color: #a371f7; }
-        .stat-value.disk { color: #f0883e; }
-        .stat-value.time { color: #3fb950; font-size: 1.3rem; }
+        .stat-value.mem { color: var(--accent-purple); }
+        .stat-value.disk { color: var(--accent-orange); }
+        .stat-value.time { color: var(--accent-green); font-size: 1.3rem; }
         
         .stat-label {
-            color: #c9d1d9;
+            color: var(--text-primary);
             font-size: 0.85rem;
             margin-top: 4px;
         }
         
         .stat-sub {
             font-size: 0.75rem;
-            color: #8b949e;
+            color: var(--text-secondary);
             margin-top: 2px;
         }
         
         .progress {
             height: 4px;
-            background: #21262d;
+            background: var(--bg-tertiary);
             border-radius: 2px;
             margin-top: 10px;
             overflow: hidden;
+            position: relative;
         }
         
         .progress-bar {
             height: 100%;
             border-radius: 2px;
-            transition: width 0.3s;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
         }
         
-        .progress-bar.cpu { background: #58a6ff; }
-        .progress-bar.mem { background: #a371f7; }
-        .progress-bar.disk { background: #f0883e; }
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            animation: shimmer 2s infinite;
+        }
         
-        /* Content */
+        .progress-bar.cpu { background: var(--accent-blue); }
+        .progress-bar.mem { background: var(--accent-purple); }
+        .progress-bar.disk { background: var(--accent-orange); }
+        
+        /* ========== CONTENT ========== */
         .content {
             padding: 0 12px;
         }
         
         .section-title {
             font-size: 0.8rem;
-            color: #8b949e;
+            color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin: 16px 0 10px 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
         .search-box {
             width: 100%;
-            background: #21262d;
-            border: 1px solid #30363d;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 12px 14px;
-            color: #c9d1d9;
+            padding: 12px 14px 12px 40px;
+            color: var(--text-primary);
             font-size: 16px;
             margin-bottom: 10px;
+            transition: all var(--transition-fast);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='%236e7681'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: 14px center;
         }
         
         .search-box:focus {
             outline: none;
-            border-color: #58a6ff;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
         }
         
-        .search-box::placeholder {
-            color: #6e7681;
-        }
+        .search-box::placeholder { color: var(--text-muted); }
         
-        /* Process List */
+        /* ========== LIST CARDS ========== */
         .list-card {
-            background: #161b22;
-            border: 1px solid #30363d;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
             border-radius: 12px;
             overflow: hidden;
+            transition: all var(--transition-fast);
         }
         
+        .list-card:hover {
+            border-color: var(--text-muted);
+        }
+        
+        /* ========== PROCESS LIST ========== */
         .process-item {
             display: flex;
             align-items: center;
             padding: 12px 14px;
-            border-bottom: 1px solid #21262d;
+            border-bottom: 1px solid var(--bg-tertiary);
+            transition: all var(--transition-fast);
+            animation: fadeIn 0.3s ease backwards;
         }
         
-        .process-item:last-child {
-            border-bottom: none;
+        .process-item:nth-child(1) { animation-delay: 0.02s; }
+        .process-item:nth-child(2) { animation-delay: 0.04s; }
+        .process-item:nth-child(3) { animation-delay: 0.06s; }
+        .process-item:nth-child(4) { animation-delay: 0.08s; }
+        .process-item:nth-child(5) { animation-delay: 0.10s; }
+        .process-item:nth-child(6) { animation-delay: 0.12s; }
+        .process-item:nth-child(7) { animation-delay: 0.14s; }
+        .process-item:nth-child(8) { animation-delay: 0.16s; }
+        .process-item:nth-child(9) { animation-delay: 0.18s; }
+        .process-item:nth-child(10) { animation-delay: 0.20s; }
+        
+        .process-item:last-child { border-bottom: none; }
+        
+        .process-item:hover {
+            background: var(--bg-tertiary);
         }
         
         .process-info {
@@ -178,7 +364,7 @@
         }
         
         .process-name {
-            color: #c9d1d9;
+            color: var(--text-primary);
             font-weight: 600;
             font-size: 0.95rem;
             white-space: nowrap;
@@ -191,11 +377,11 @@
             gap: 14px;
             margin-top: 4px;
             font-size: 0.8rem;
-            color: #8b949e;
+            color: var(--text-secondary);
         }
         
         .btn-kill {
-            background: #da3633;
+            background: var(--accent-red);
             border: none;
             width: 32px;
             height: 32px;
@@ -206,18 +392,32 @@
             color: #fff;
             flex-shrink: 0;
             margin-left: 10px;
+            cursor: pointer;
+            transition: all var(--transition-fast);
         }
         
-        /* Port List */
+        .btn-kill:hover {
+            background: var(--accent-red-hover);
+            transform: scale(1.05);
+        }
+        
+        .btn-kill:active { transform: scale(0.95); }
+        
+        .btn-kill .icon { width: 18px; height: 18px; }
+        
+        /* ========== PORT LIST ========== */
         .port-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 12px 14px;
-            border-bottom: 1px solid #21262d;
+            border-bottom: 1px solid var(--bg-tertiary);
+            transition: all var(--transition-fast);
         }
         
         .port-item:last-child { border-bottom: none; }
+        
+        .port-item:hover { background: var(--bg-tertiary); }
         
         .port-left {
             display: flex;
@@ -230,33 +430,37 @@
             border-radius: 4px;
             font-size: 0.7rem;
             font-weight: 600;
+            text-transform: uppercase;
         }
         
-        .badge-tcp { background: #238636; color: #fff; }
-        .badge-udp { background: #9e6a03; color: #fff; }
+        .badge-tcp { background: var(--accent-green); color: #fff; }
+        .badge-udp { background: var(--accent-orange); color: #fff; }
         
         .port-num {
             font-weight: 700;
-            color: #58a6ff;
+            color: var(--accent-blue);
             font-size: 1rem;
         }
         
         .port-process {
-            color: #8b949e;
+            color: var(--text-secondary);
             font-size: 0.8rem;
         }
         
-        /* Network */
+        /* ========== NETWORK ========== */
         .network-item {
             padding: 12px 14px;
-            border-bottom: 1px solid #21262d;
+            border-bottom: 1px solid var(--bg-tertiary);
+            transition: all var(--transition-fast);
         }
         
         .network-item:last-child { border-bottom: none; }
         
+        .network-item:hover { background: var(--bg-tertiary); }
+        
         .network-name {
             font-weight: 600;
-            color: #c9d1d9;
+            color: var(--text-primary);
             margin-bottom: 6px;
         }
         
@@ -266,22 +470,36 @@
             font-size: 0.8rem;
         }
         
-        .net-up { color: #3fb950; }
-        .net-down { color: #58a6ff; }
+        .net-up { 
+            color: var(--accent-green);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
         
-        /* Bottom Nav */
+        .net-down { 
+            color: var(--accent-blue);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .net-up .icon, .net-down .icon { width: 14px; height: 14px; }
+        
+        /* ========== BOTTOM NAV ========== */
         .bottom-nav {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            background: #161b22;
-            border-top: 1px solid #30363d;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
             display: flex;
             justify-content: space-around;
             padding: 8px 0;
             padding-bottom: max(8px, env(safe-area-inset-bottom));
             z-index: 100;
+            backdrop-filter: blur(10px);
         }
         
         .nav-item {
@@ -289,23 +507,44 @@
             flex-direction: column;
             align-items: center;
             padding: 6px 20px;
-            color: #8b949e;
+            color: var(--text-secondary);
             text-decoration: none;
             font-size: 0.7rem;
             border-radius: 8px;
+            transition: all var(--transition-fast);
+            position: relative;
         }
         
-        .nav-item i {
-            font-size: 1.2rem;
-            margin-bottom: 2px;
+        .nav-item .icon {
+            width: 22px;
+            height: 22px;
+            margin-bottom: 4px;
+            transition: transform var(--transition-fast);
         }
+        
+        .nav-item:hover {
+            color: var(--text-primary);
+            background: var(--bg-tertiary);
+        }
+        
+        .nav-item:hover .icon { transform: translateY(-2px); }
         
         .nav-item.active {
-            color: #58a6ff;
+            color: var(--accent-blue);
             background: rgba(88, 166, 255, 0.1);
         }
         
-        /* Refresh Button */
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            width: 20px;
+            height: 3px;
+            background: var(--accent-blue);
+            border-radius: 2px;
+        }
+        
+        /* ========== REFRESH BUTTON ========== */
         .refresh-btn {
             position: fixed;
             bottom: 75px;
@@ -313,106 +552,157 @@
             width: 48px;
             height: 48px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #58a6ff, #a371f7);
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
             border: none;
-            box-shadow: 0 4px 12px rgba(88, 166, 255, 0.3);
+            box-shadow: var(--shadow-glow);
             z-index: 99;
             color: #fff;
-            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
         }
         
-        /* Tab Panes */
-        .tab-pane { display: none; }
+        .refresh-btn:hover {
+            transform: scale(1.1) rotate(15deg);
+            box-shadow: 0 6px 20px rgba(88, 166, 255, 0.4);
+        }
+        
+        .refresh-btn:active { transform: scale(0.95); }
+        
+        .refresh-btn .icon { width: 22px; height: 22px; }
+        
+        .refresh-btn.spinning .icon { animation: spin 1s linear infinite; }
+        
+        /* ========== TAB PANES ========== */
+        .tab-pane { 
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        
         .tab-pane.active { display: block; }
         
-        /* File Manager */
+        /* ========== FILE MANAGER ========== */
         .bookmarks {
             display: flex;
             gap: 6px;
             margin-bottom: 10px;
             flex-wrap: wrap;
             align-items: center;
+            animation: slideInRight 0.3s ease;
         }
-        .bookmark-label {
-            font-size: 14px;
-            color: #8b949e;
+        
+        .bookmark-icon {
+            width: 16px;
+            height: 16px;
+            color: var(--text-secondary);
+            flex-shrink: 0;
         }
+        
         .bookmark-btn {
-            background: #21262d;
-            border: 1px solid #30363d;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
             border-radius: 6px;
             padding: 6px 12px;
-            color: #58a6ff;
+            color: var(--accent-blue);
             font-size: 12px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all var(--transition-fast);
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
+        
         .bookmark-btn:hover {
-            background: #30363d;
-            border-color: #58a6ff;
+            background: var(--border-color);
+            border-color: var(--accent-blue);
+            transform: translateY(-1px);
         }
+        
         .bookmark-remove {
             margin-left: 6px;
-            color: #f85149;
+            color: var(--accent-red);
             font-weight: bold;
+            cursor: pointer;
+            transition: color var(--transition-fast);
         }
-        .bookmark-remove:hover {
-            color: #ff7b72;
-        }
+        
+        .bookmark-remove:hover { color: #ff7b72; }
         
         .file-toolbar {
             display: flex;
             gap: 10px;
             margin-bottom: 10px;
             flex-wrap: wrap;
+            animation: fadeIn 0.3s ease;
         }
         
         .btn-action {
-            background: #21262d;
-            border: 1px solid #30363d;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 10px 16px;
-            color: #c9d1d9;
+            color: var(--text-primary);
             font-size: 0.85rem;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
+            transition: all var(--transition-fast);
         }
         
         .btn-action:hover {
-            background: #30363d;
+            background: var(--border-color);
+            border-color: var(--text-muted);
+            transform: translateY(-1px);
         }
         
+        .btn-action:active { transform: translateY(0); }
+        
+        .btn-action .icon { width: 16px; height: 16px; }
+        
         .btn-delete {
-            background: #da3633;
-            border-color: #da3633;
+            background: var(--accent-red);
+            border-color: var(--accent-red);
             color: #fff;
         }
         
         .btn-delete:hover {
-            background: #b02a26;
+            background: var(--accent-red-hover);
+            border-color: var(--accent-red-hover);
         }
         
         .file-item {
             display: flex;
             align-items: center;
             padding: 12px 14px;
-            border-bottom: 1px solid #21262d;
-            gap: 10px;
+            border-bottom: 1px solid var(--bg-tertiary);
+            gap: 12px;
+            transition: all var(--transition-fast);
+            animation: fadeIn 0.3s ease backwards;
         }
         
-        .file-item:last-child {
-            border-bottom: none;
+        .file-item:hover {
+            background: var(--bg-tertiary);
         }
+        
+        .file-item:last-child { border-bottom: none; }
         
         .file-icon {
-            font-size: 1.3rem;
-            color: #8b949e;
+            width: 22px;
+            height: 22px;
+            color: var(--text-secondary);
+            transition: all var(--transition-fast);
+            flex-shrink: 0;
         }
         
         .file-icon.folder {
-            color: #58a6ff;
+            color: var(--accent-blue);
+        }
+        
+        .file-item:hover .file-icon.folder {
+            transform: scale(1.1);
         }
         
         .file-info {
@@ -421,7 +711,7 @@
         }
         
         .file-name {
-            color: #c9d1d9;
+            color: var(--text-primary);
             font-weight: 500;
             white-space: nowrap;
             overflow: hidden;
@@ -430,7 +720,7 @@
         
         .file-meta {
             font-size: 0.75rem;
-            color: #6e7681;
+            color: var(--text-muted);
             margin-top: 2px;
         }
         
@@ -445,7 +735,7 @@
             border-radius: 6px;
         }
         
-        /* Modal Editor */
+        /* ========== MODAL EDITOR ========== */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -453,18 +743,22 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.85);
             z-index: 1000;
             justify-content: center;
             align-items: center;
             padding: 20px;
+            backdrop-filter: blur(5px);
         }
+        
         .modal-overlay.active {
             display: flex;
+            animation: fadeIn 0.2s ease;
         }
+        
         .modal-container {
-            background: #161b22;
-            border: 1px solid #30363d;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
             border-radius: 12px;
             width: 100%;
             max-width: 900px;
@@ -472,98 +766,145 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            animation: modalSlideIn 0.3s ease;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
         }
+        
         .modal-header {
-            background: #21262d;
+            background: var(--bg-tertiary);
             padding: 12px 16px;
             display: flex;
             align-items: center;
             gap: 12px;
-            border-bottom: 1px solid #30363d;
+            border-bottom: 1px solid var(--border-color);
             flex-wrap: wrap;
         }
+        
         .modal-title {
             flex: 1;
             font-family: monospace;
             font-size: 14px;
-            color: #58a6ff;
+            color: var(--accent-blue);
             word-break: break-all;
         }
+        
         .modal-close {
-            background: #da3633;
+            background: var(--accent-red);
             color: white;
             border: none;
-            padding: 8px 12px;
+            padding: 8px 14px;
             border-radius: 6px;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all var(--transition-fast);
         }
+        
+        .modal-close:hover {
+            background: var(--accent-red-hover);
+            transform: translateY(-1px);
+        }
+        
+        .modal-close .icon { width: 14px; height: 14px; }
+        
         .modal-body {
             flex: 1;
             overflow: hidden;
             position: relative;
         }
+        
         .modal-footer {
-            background: #21262d;
+            background: var(--bg-tertiary);
             padding: 12px 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-top: 1px solid #30363d;
+            border-top: 1px solid var(--border-color);
         }
+        
         .modal-status {
             font-size: 12px;
-            color: #8b949e;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
-        .modal-status.success { color: #3fb950; }
+        
+        .modal-status.success { color: var(--accent-green); }
         .modal-status.error { color: #f85149; }
         
-        /* Font size controls */
+        .btn-save {
+            background: var(--accent-green);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all var(--transition-fast);
+        }
+        
+        .btn-save:hover {
+            background: #2ea043;
+            transform: translateY(-1px);
+        }
+        
+        .btn-save:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* ========== FONT SIZE CONTROLS ========== */
         .font-controls {
             display: flex;
             align-items: center;
             gap: 6px;
-            background: #30363d;
+            background: var(--border-color);
             padding: 4px 8px;
             border-radius: 6px;
         }
+        
         .font-btn {
-            background: #21262d;
+            background: var(--bg-tertiary);
             border: none;
-            color: #c9d1d9;
+            color: var(--text-primary);
             padding: 4px 10px;
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
+            transition: all var(--transition-fast);
         }
-        .font-btn:hover { background: #484f58; }
+        
+        .font-btn:hover { 
+            background: #484f58; 
+            transform: scale(1.05);
+        }
+        
         .font-size-label {
-            color: #8b949e;
+            color: var(--text-secondary);
             font-size: 12px;
             min-width: 35px;
             text-align: center;
         }
         
-        /* CodeMirror trong modal */
+        /* ========== CODEMIRROR ========== */
         .CodeMirror {
             height: 100% !important;
             font-family: 'SF Mono', Monaco, monospace;
             font-size: 13px;
             line-height: 1.5;
-            background: #0d1117;
+            background: var(--bg-primary);
         }
         
         /* ========== MOBILE FIRST (Default) ========== */
-        .sidebar {
-            display: none;
-        }
-        
-        .main-wrapper {
-            display: block;
-        }
-        
-        .content-area {
-            display: block;
-        }
+        .sidebar { display: none; }
+        .main-wrapper { display: block; }
+        .content-area { display: block; }
         
         /* ========== DESKTOP LAYOUT ========== */
         @media (min-width: 1024px) {
@@ -582,59 +923,63 @@
                 font-size: 1.3rem;
             }
             
-            /* Main Layout */
+            .navbar-brand .icon {
+                width: 26px;
+                height: 26px;
+            }
+            
             .main-wrapper {
                 display: flex;
                 flex: 1;
                 overflow: hidden;
             }
             
-            /* Sidebar */
             .sidebar {
                 width: 240px;
-                background: #161b22;
-                border-right: 1px solid #30363d;
+                background: var(--bg-secondary);
+                border-right: 1px solid var(--border-color);
                 display: flex;
                 flex-direction: column;
                 flex-shrink: 0;
+                animation: slideInRight 0.3s ease;
             }
             
             .sidebar .nav-item {
                 display: flex;
+                flex-direction: row;
                 align-items: center;
                 padding: 14px 20px;
-                color: #8b949e;
+                color: var(--text-secondary);
                 text-decoration: none;
                 border-left: 3px solid transparent;
-                transition: all 0.2s;
+                transition: all var(--transition-fast);
+                font-size: 0.9rem;
             }
             
             .sidebar .nav-item:hover {
-                background: #21262d;
-                color: #c9d1d9;
+                background: var(--bg-tertiary);
+                color: var(--text-primary);
             }
             
             .sidebar .nav-item.active {
-                background: #21262d;
-                color: #58a6ff;
-                border-left-color: #58a6ff;
+                background: var(--bg-tertiary);
+                color: var(--accent-blue);
+                border-left-color: var(--accent-blue);
             }
             
-            .sidebar .nav-item i {
-                font-size: 1.2rem;
+            .sidebar .nav-item .icon {
+                width: 20px;
+                height: 20px;
                 margin-right: 12px;
-                width: 24px;
-                text-align: center;
+                margin-bottom: 0;
             }
             
-            /* Content Area */
             .content-area {
                 flex: 1;
                 overflow-y: auto;
                 padding: 24px;
             }
             
-            /* Stats Grid Desktop */
             .stats-container {
                 padding: 0;
                 margin-bottom: 24px;
@@ -647,49 +992,20 @@
             
             .stat-card {
                 padding: 20px;
-                border-radius: 12px;
             }
             
             .stat-value {
                 font-size: 2.2rem;
             }
             
-            /* Tables Desktop */
-            .card {
-                border-radius: 12px;
-                margin-bottom: 20px;
-            }
-            
             .process-item, .port-item, .network-item, .file-item {
                 padding: 14px 20px;
             }
             
-            .process-name {
-                font-size: 0.95rem;
-            }
-            
-            /* Desktop Table View */
-            .desktop-table {
-                display: none;
-            }
-            
-            .mobile-list {
-                display: block;
-            }
-            
-            /* Tab Content */
-            .tab-content {
-                display: grid;
-                grid-template-columns: 1fr;
-                gap: 20px;
-            }
-            
-            /* Hide mobile bottom nav */
             .bottom-nav {
                 display: none !important;
             }
             
-            /* Files Grid */
             .file-item {
                 display: grid;
                 grid-template-columns: auto 1fr auto auto;
@@ -701,172 +1017,316 @@
                 gap: 10px;
             }
             
-            /* Section titles */
             .section-title {
                 font-size: 0.9rem;
                 margin: 0 0 16px 0;
             }
             
-            /* Search box */
             .search-box {
                 max-width: 400px;
             }
         }
         
-        /* Extra large screens */
         @media (min-width: 1440px) {
-            .sidebar {
-                width: 280px;
-            }
-            
-            .content-area {
-                padding: 32px 40px;
-            }
-            
-            .stats-grid {
-                gap: 20px;
-            }
-            
-            .stat-card {
-                padding: 24px;
-            }
-            
-            .stat-value {
-                font-size: 2.5rem;
-            }
+            .sidebar { width: 280px; }
+            .content-area { padding: 32px 40px; }
+            .stats-grid { gap: 20px; }
+            .stat-card { padding: 24px; }
+            .stat-value { font-size: 2.5rem; }
         }
         
-        /* Hide scrollbar */
-        ::-webkit-scrollbar { width: 0; height: 0; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
     </style>
 </head>
 <body>
+    <!-- ========== NAVBAR ========== -->
     <nav class="navbar">
-        <span class="navbar-brand"><i class="bi bi-cpu"></i> SysMonitor</span>
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <a href="/terminal" target="_blank" style="color: #3fb950; text-decoration: none; font-size: 14px;"><i class="bi bi-terminal"></i> Terminal</a>
-            <span class="live-time"><span class="status-dot"></span><span id="live-time">--:--</span></span>
-            <a href="/logout" style="color: #f85149; text-decoration: none; font-size: 14px;"><i class="bi bi-box-arrow-right"></i> Logout</a>
+        <span class="navbar-brand">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="4" y="4" width="16" height="16" rx="2"/>
+                <path d="M9 9h6v6H9z" fill="currentColor" stroke="none"/>
+                <path d="M4 9H2M4 15H2M22 9h-2M22 15h-2M9 4V2M15 4V2M9 22v-2M15 22v-2" stroke-linecap="round"/>
+            </svg>
+            SysMonitor
+        </span>
+        <div class="navbar-actions">
+            <a href="/terminal" target="_blank" class="navbar-link terminal">
+                <svg class="icon icon-md" viewBox="0 0 16 16"><path d="M6 9a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3A.5.5 0 0 1 6 9zM3.854 4.146a.5.5 0 0 1 0 .708L2.707 6l1.147 1.146a.5.5 0 1 1-.708.708l-1.5-1.5a.5.5 0 0 1 0-.708l1.5-1.5a.5.5 0 0 1 .708 0zm0 4a.5.5 0 0 1 0 .708L2.707 10l1.147 1.146a.5.5 0 0 1-.708.708l-1.5-1.5a.5.5 0 0 1 0-.708l1.5-1.5a.5.5 0 0 1 .708 0z"/><path d="M0 1.5A.5.5 0 0 1 .5 1h15a.5.5 0 0 1 .5.5v11a.5.5 0 0 1-.5.5H3.707l2.147 2.146a.5.5 0 0 1-.708.708l-2.5-2.5A.5.5 0 0 1 2.5 12.5v-11a.5.5 0 0 1 .5-.5h12z"/></svg>
+                Terminal
+            </a>
+            <span class="live-time">
+                <span class="status-dot"></span>
+                <span id="live-time">--:--</span>
+            </span>
+            <a href="/logout" class="navbar-link logout">
+                <svg class="icon icon-md" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/><path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/></svg>
+                Logout
+            </a>
         </div>
     </nav>
 
-    <!-- Main Wrapper for Desktop Sidebar Layout -->
+    <!-- ========== MAIN WRAPPER ========== -->
     <div class="main-wrapper">
-        <!-- Desktop Sidebar -->
+        <!-- Sidebar -->
         <aside class="sidebar">
             <a href="#" class="nav-item active" data-tab="system" onclick="switchTab('system')">
-                <i class="bi bi-speedometer2"></i> Dashboard
+                <svg class="icon" viewBox="0 0 16 16"><path d="M8 4a.5.5 0 0 1 .5.5V6a.5.5 0 0 1-1 0V4.5A.5.5 0 0 1 8 4zM3.732 5.732a.5.5 0 0 1 .707 0l.915.914a.5.5 0 1 1-.708.708l-.914-.915a.5.5 0 0 1 0-.707zM2 10a.5.5 0 0 1 .5-.5h1.586a.5.5 0 0 1 0 1H2.5A.5.5 0 0 1 2 10zm9.5 0a.5.5 0 0 1 .5-.5h1.5a.5.5 0 0 1 0 1H12a.5.5 0 0 1-.5-.5zm.754-4.246a.5.5 0 0 1 0 .708l-.914.914a.5.5 0 0 1-.707-.707l.915-.915a.5.5 0 0 1 .707 0zM8 7a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-5.146 5.146a.5.5 0 0 1 0-.708l.914-.914a.5.5 0 0 1 .708.708l-.915.915a.5.5 0 0 1-.707 0zM2 14.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5zM14 8a.5.5 0 0 1-.5.5h-1.586a.5.5 0 0 1 0-1H13.5A.5.5 0 0 1 14 8z"/><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8z"/></svg>
+                Dashboard
             </a>
             <a href="#" class="nav-item" data-tab="processes" onclick="switchTab('processes')">
-                <i class="bi bi-list-task"></i> Processes
+                <svg class="icon" viewBox="0 0 16 16"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V1zm0 4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5zm0 4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V9zm-2 5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-1z"/></svg>
+                Processes
             </a>
             <a href="#" class="nav-item" data-tab="ports" onclick="switchTab('ports')">
-                <i class="bi bi-broadcast"></i> Ports
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="6" y="3" width="12" height="6" rx="2"/>
+                    <path d="M9 9v10a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V9"/>
+                    <path d="M12 13v4"/>
+                </svg>
+                Ports
             </a>
             <a href="#" class="nav-item" data-tab="network" onclick="switchTab('network')">
-                <i class="bi bi-wifi"></i> Network
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+                    <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+                    <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                    <line x1="12" y1="20" x2="12.01" y2="20" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+                Network
             </a>
             <a href="#" class="nav-item" data-tab="files" onclick="switchTab('files')">
-                <i class="bi bi-folder"></i> Files
+                <svg class="icon" viewBox="0 0 16 16"><path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31zM2.19 4a1 1 0 0 0-.996 1.09l.637 7a1 1 0 0 0 .995.91h10.348a1 1 0 0 0 .995-.91l.637-7A1 1 0 0 0 13.81 4H2.19zm4.69-1.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981l.006.139C1.72 3.042 1.95 3 2.19 3h5.4l-.5-.707z"/></svg>
+                Files
             </a>
-            <a href="/terminal" target="_blank" class="nav-item" style="margin-top: auto; border-top: 1px solid #30363d;">
-                <i class="bi bi-terminal"></i> Terminal
+            <a href="/terminal" target="_blank" class="nav-item" style="margin-top: auto; border-top: 1px solid var(--border-color);">
+                <svg class="icon" viewBox="0 0 16 16"><path d="M6 9a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3A.5.5 0 0 1 6 9zM3.854 4.146a.5.5 0 0 1 0 .708L2.707 6l1.147 1.146a.5.5 0 1 1-.708.708l-1.5-1.5a.5.5 0 0 1 0-.708l1.5-1.5a.5.5 0 0 1 .708 0zm0 4a.5.5 0 0 1 0 .708L2.707 10l1.147 1.146a.5.5 0 0 1-.708.708l-1.5-1.5a.5.5 0 0 1 0-.708l1.5-1.5a.5.5 0 0 1 .708 0z"/><path d="M0 1.5A.5.5 0 0 1 .5 1h15a.5.5 0 0 1 .5.5v11a.5.5 0 0 1-.5.5H3.707l2.147 2.146a.5.5 0 0 1-.708.708l-2.5-2.5A.5.5 0 0 1 2.5 12.5v-11a.5.5 0 0 1 .5-.5h12z"/></svg>
+                Terminal
             </a>
         </aside>
 
         <!-- Content Area -->
         <main class="content-area">
+            <!-- Stats Grid -->
             <div class="stats-container">
-        <div class="stats-grid">
-            <div class="stat-card">
-                <i class="bi bi-cpu stat-icon cpu"></i>
-                <div class="stat-value" id="cpu-percent">--%</div>
-                <div class="stat-label">CPU</div>
-                <div class="progress"><div class="progress-bar cpu" id="cpu-bar"></div></div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <svg class="stat-icon cpu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <rect x="4" y="4" width="16" height="16" rx="2"/>
+                            <path d="M9 9h6v6H9z" fill="currentColor" stroke="none"/>
+                            <path d="M4 9H2M4 15H2M22 9h-2M22 15h-2M9 4V2M15 4V2M9 22v-2M15 22v-2" stroke-linecap="round"/>
+                        </svg>
+                        <div class="stat-value" id="cpu-percent">--%</div>
+                        <div class="stat-label">CPU</div>
+                        <div class="progress"><div class="progress-bar cpu" id="cpu-bar"></div></div>
+                    </div>
+                    <div class="stat-card">
+                        <svg class="stat-icon mem" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <rect x="2" y="6" width="20" height="12" rx="2"/>
+                            <path d="M6 10v4M10 10v4M14 10v4M18 10v4" stroke-linecap="round"/>
+                            <path d="M2 10h20M2 14h20"/>
+                        </svg>
+                        <div class="stat-value mem" id="mem-percent">--%</div>
+                        <div class="stat-label">Memory</div>
+                        <div class="stat-sub"><span id="mem-used">-</span>/<span id="mem-total">-</span> MB</div>
+                        <div class="progress"><div class="progress-bar mem" id="mem-bar"></div></div>
+                    </div>
+                    <div class="stat-card">
+                        <svg class="stat-icon disk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <ellipse cx="12" cy="12" rx="10" ry="4"/>
+                            <path d="M2 12v4c0 2.2 4.5 4 10 4s10-1.8 10-4v-4"/>
+                            <path d="M2 16v4c0 2.2 4.5 4 10 4s10-1.8 10-4v-4"/>
+                            <ellipse cx="12" cy="12" rx="3" ry="1.2" fill="currentColor" stroke="none"/>
+                        </svg>
+                        <div class="stat-value disk" id="disk-percent">--%</div>
+                        <div class="stat-label">Disk</div>
+                        <div class="stat-sub"><span id="disk-used">-</span>/<span id="disk-total">-</span> GB</div>
+                        <div class="progress"><div class="progress-bar disk" id="disk-bar"></div></div>
+                    </div>
+                    <div class="stat-card">
+                        <svg class="stat-icon time" viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/></svg>
+                        <div class="stat-value time" id="uptime">--</div>
+                        <div class="stat-label">Uptime</div>
+                        <div class="stat-sub" id="hostname">-</div>
+                    </div>
+                </div>
             </div>
-            <div class="stat-card">
-                <i class="bi bi-memory stat-icon mem"></i>
-                <div class="stat-value mem" id="mem-percent">--%</div>
-                <div class="stat-label">Memory</div>
-                <div class="stat-sub"><span id="mem-used">-</span>/<span id="mem-total">-</span> MB</div>
-                <div class="progress"><div class="progress-bar mem" id="mem-bar"></div></div>
-            </div>
-            <div class="stat-card">
-                <i class="bi bi-hdd stat-icon disk"></i>
-                <div class="stat-value disk" id="disk-percent">--%</div>
-                <div class="stat-label">Disk</div>
-                <div class="stat-sub"><span id="disk-used">-</span>/<span id="disk-total">-</span> GB</div>
-                <div class="progress"><div class="progress-bar disk" id="disk-bar"></div></div>
-            </div>
-            <div class="stat-card">
-                <i class="bi bi-clock stat-icon time"></i>
-                <div class="stat-value time" id="uptime">--</div>
-                <div class="stat-label">Uptime</div>
-                <div class="stat-sub" id="hostname">-</div>
-            </div>
-        </div>
-    </div>
 
-    <div class="content">
-        <div class="tab-pane active" id="processes">
-            <div class="section-title">Processes</div>
-            <input type="text" class="search-box" id="process-search" placeholder="🔍 Search...">
-            <div class="list-card" id="process-list"></div>
-        </div>
-        
-        <div class="tab-pane" id="ports">
-            <div class="section-title">Listening Ports</div>
-            <div class="list-card" id="ports-list"></div>
-        </div>
-        
-        <div class="tab-pane" id="network">
-            <div class="section-title">Network Interfaces</div>
-            <div class="list-card" id="network-list"></div>
-        </div>
-        
-        <div class="tab-pane" id="files">
-            <div class="section-title">File Manager</div>
-            <!-- Bookmarks -->
-            <div class="bookmarks" id="bookmarks">
-                <span class="bookmark-label">📌</span>
-                <button class="bookmark-btn" onclick="goToPath('/root')">~</button>
-                <button class="bookmark-btn" onclick="goToPath('/etc')">etc</button>
-                <button class="bookmark-btn" onclick="goToPath('/var/log')">logs</button>
-                <button class="bookmark-btn" onclick="goToPath('/opt')">opt</button>
-                <button class="bookmark-btn" onclick="addBookmark()" title="Add current path">+</button>
+            <!-- Content -->
+            <div class="content">
+                <!-- Processes Tab -->
+                <div class="tab-pane active" id="processes">
+                    <div class="section-title">
+                        <svg class="icon icon-sm" viewBox="0 0 16 16"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V1zm0 4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5zm0 4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V9z"/></svg>
+                        Processes
+                    </div>
+                    <input type="text" class="search-box" id="process-search" placeholder="Search processes...">
+                    <div class="list-card" id="process-list"></div>
+                </div>
+                
+                <!-- Ports Tab -->
+                <div class="tab-pane" id="ports">
+                    <div class="section-title">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="6" y="3" width="12" height="6" rx="2"/>
+                            <path d="M9 9v10a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V9"/>
+                            <path d="M12 13v4"/>
+                        </svg>
+                        Listening Ports
+                    </div>
+                    <div class="list-card" id="ports-list"></div>
+                </div>
+                
+                <!-- Network Tab -->
+                <div class="tab-pane" id="network">
+                    <div class="section-title">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+                            <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+                            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                            <line x1="12" y1="20" x2="12.01" y2="20" stroke-width="3" stroke-linecap="round"/>
+                        </svg>
+                        Network Interfaces
+                    </div>
+                    <div class="list-card" id="network-list"></div>
+                </div>
+                
+                <!-- Files Tab -->
+                <div class="tab-pane" id="files">
+                    <div class="section-title">
+                        <svg class="icon icon-sm" viewBox="0 0 16 16"><path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31zM2.19 4a1 1 0 0 0-.996 1.09l.637 7a1 1 0 0 0 .995.91h10.348a1 1 0 0 0 .995-.91l.637-7A1 1 0 0 0 13.81 4H2.19zm4.69-1.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981l.006.139C1.72 3.042 1.95 3 2.19 3h5.4l-.5-.707z"/></svg>
+                        File Manager
+                    </div>
+                    
+                    <!-- Bookmarks -->
+                    <div class="bookmarks" id="bookmarks">
+                        <svg class="icon bookmark-icon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+                            <path d="M4.146 3a.5.5 0 0 1 .5-.5h6.808a.5.5 0 0 1 .5.5v11.086a.5.5 0 0 1-.854.354l-2.792-2.793-2.792 2.793a.5.5 0 0 1-.854-.354V3z"/>
+                        </svg>
+                        <button class="bookmark-btn" onclick="goToPath('/root')">~</button>
+                        <button class="bookmark-btn" onclick="goToPath('/etc')">etc</button>
+                        <button class="bookmark-btn" onclick="goToPath('/var/log')">logs</button>
+                        <button class="bookmark-btn" onclick="goToPath('/opt')">opt</button>
+                        <button class="bookmark-btn" onclick="addBookmark()" title="Add current path">+</button>
+                    </div>
+                    
+                    <!-- Toolbar -->
+                    <div class="file-toolbar">
+                        <input type="text" class="search-box" id="current-path" value="/root" placeholder="Enter path..." onkeypress="handlePathInput(event)">
+                        <button class="btn-action" onclick="parentDir()" title="Go to parent directory">
+                            <svg class="icon" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z"/></svg>
+                        </button>
+                        <button class="btn-action" onclick="refreshFiles()" title="Refresh">
+                            <svg class="icon" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
+                        </button>
+                        <button class="btn-action" onclick="pasteFile()" id="pasteBtn" style="display:none;" title="Paste file here">
+                            <svg class="icon" viewBox="0 0 16 16"><path d="M4 1.5a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h2zm6 0a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h2zm-3 0a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h2zM4 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H4zm0 1h8a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>
+                            Paste
+                        </button>
+                    </div>
+                    
+                    <div class="list-card" id="files-list"></div>
+                </div>
             </div>
-            <div class="file-toolbar">
-                <input type="text" class="search-box" id="current-path" value="/root" placeholder="Enter path..." onkeypress="handlePathInput(event)">
-                <button class="btn-action" onclick="parentDir()"><i class="bi bi-arrow-up"></i></button>
-                <button class="btn-action" onclick="refreshFiles()"><i class="bi bi-arrow-clockwise"></i></button>
-                <button class="btn-action" onclick="pasteFile()" id="pasteBtn" style="display:none;" title="Paste file here"><i class="bi bi-clipboard"></i> Paste</button>
-            </div>
-            <div class="list-card" id="files-list"></div>
-        </div>
-    </div>
 
-    <button class="refresh-btn" onclick="refreshAll()"><i class="bi bi-arrow-clockwise"></i></button>
+            <!-- Refresh Button -->
+            <button class="refresh-btn" onclick="refreshAll()" title="Refresh all">
+                <svg class="icon" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
+            </button>
         </main>
-    </div><!-- End main-wrapper -->
+    </div>
 
+    <!-- ========== BOTTOM NAV (Mobile) ========== -->
     <nav class="bottom-nav">
-        <a href="#" class="nav-item active" data-tab="processes"><i class="bi bi-list-task"></i>Processes</a>
-        <a href="#" class="nav-item" data-tab="ports"><i class="bi bi-plug"></i>Ports</a>
-        <a href="#" class="nav-item" data-tab="network"><i class="bi bi-wifi"></i>Network</a>
-        <a href="#" class="nav-item" data-tab="files"><i class="bi bi-folder"></i>Files</a>
+        <a href="#" class="nav-item active" data-tab="processes">
+            <svg class="icon" viewBox="0 0 16 16"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V1zm0 4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5zm0 4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V9z"/></svg>
+            Processes
+        </a>
+        <a href="#" class="nav-item" data-tab="ports">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="6" y="3" width="12" height="6" rx="2"/>
+                <path d="M9 9v10a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V9"/>
+                <path d="M12 13v4"/>
+            </svg>
+            Ports
+        </a>
+        <a href="#" class="nav-item" data-tab="network">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+                <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                <line x1="12" y1="20" x2="12.01" y2="20" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            Network
+        </a>
+        <a href="#" class="nav-item" data-tab="files">
+            <svg class="icon" viewBox="0 0 16 16"><path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31zM2.19 4a1 1 0 0 0-.996 1.09l.637 7a1 1 0 0 0 .995.91h10.348a1 1 0 0 0 .995-.91l.637-7A1 1 0 0 0 13.81 4H2.19zm4.69-1.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981l.006.139C1.72 3.042 1.95 3 2.19 3h5.4l-.5-.707z"/></svg>
+            Files
+        </a>
     </nav>
 
+    <!-- ========== EDITOR MODAL ========== -->
+    <div class="modal-overlay" id="editorModal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <span class="modal-title" id="modalTitle">editor</span>
+                <div class="font-controls">
+                    <button class="font-btn" onclick="changeFontSize(-1)">A-</button>
+                    <span class="font-size-label" id="fontSizeLabel">14px</span>
+                    <button class="font-btn" onclick="changeFontSize(1)">A+</button>
+                </div>
+                <button class="modal-close" onclick="closeEditorModal()">
+                    <svg class="icon icon-sm" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>
+                    Close
+                </button>
+            </div>
+            <div class="modal-body" id="modalEditor"></div>
+            <div class="modal-footer">
+                <span class="modal-status" id="modalStatus">Ready</span>
+                <button class="btn-save" id="modalSaveBtn" onclick="saveModalFile()" disabled>
+                    <svg class="icon icon-sm" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+                    Save
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== SCRIPTS ========== -->
     <script>
+        // ========== NAVIGATION ==========
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', function(e) {
                 e.preventDefault();
+                const tabName = this.dataset.tab;
+                if (!tabName) return;
+                
+                // Update active states
                 document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
                 document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+                
                 this.classList.add('active');
-                document.getElementById(this.dataset.tab).classList.add('active');
+                const targetTab = document.getElementById(tabName);
+                if (targetTab) targetTab.classList.add('active');
             });
         });
 
+        function switchTab(tabName) {
+            document.querySelectorAll('.sidebar .nav-item, .bottom-nav .nav-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.tab === tabName) item.classList.add('active');
+            });
+            
+            document.querySelectorAll('.tab-pane').forEach(tab => tab.classList.remove('active'));
+            
+            const targetTab = document.getElementById(tabName);
+            if (targetTab) targetTab.classList.add('active');
+            
+            if (tabName === 'system') document.getElementById('processes').classList.add('active');
+        }
+
+        // ========== UTILITIES ==========
         function formatBytes(b) {
             if (b === 0) return '0 B';
             const k = 1024, s = ['B', 'KB', 'MB', 'GB'];
@@ -880,6 +1340,7 @@
         setInterval(updateTime, 1000);
         updateTime();
 
+        // ========== API LOADERS ==========
         async function loadSystem() {
             try {
                 const d = await (await fetch('/api/system')).json();
@@ -901,6 +1362,7 @@
         async function loadProcesses() {
             try {
                 const data = await (await fetch('/api/processes')).json();
+                const killIcon = '<svg class="icon" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>';
                 document.getElementById('process-list').innerHTML = data
                     .sort((a, b) => b.cpu - a.cpu).slice(0, 40)
                     .map(p => `
@@ -913,7 +1375,7 @@
                                     <span>MEM ${p.memory.toFixed(1)}%</span>
                                 </div>
                             </div>
-                            <button class="btn-kill" onclick="killProc(${p.pid},'${p.name}')"><i class="bi bi-x"></i></button>
+                            <button class="btn-kill" onclick="killProc(${p.pid},'${p.name}')">${killIcon}</button>
                         </div>
                     `).join('');
             } catch (e) {}
@@ -937,12 +1399,14 @@
         async function loadNetwork() {
             try {
                 const data = await (await fetch('/api/network')).json();
+                const upIcon = '<svg class="icon" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 15a.5.5 0 0 0 .5-.5V2.707l3.146 3.147a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 1 0 .708.708L7.5 2.707V14.5a.5.5 0 0 0 .5.5z"/></svg>';
+                const downIcon = '<svg class="icon" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 1a.5.5 0 0 1 .5.5v11.793l3.146-3.147a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 .708-.708L7.5 13.293V1.5A.5.5 0 0 1 8 1z"/></svg>';
                 document.getElementById('network-list').innerHTML = data.map(n => `
                     <div class="network-item">
                         <div class="network-name">${n.interface}</div>
                         <div class="network-stats">
-                            <span class="net-up">↑ ${formatBytes(n.bytes_sent)}</span>
-                            <span class="net-down">↓ ${formatBytes(n.bytes_recv)}</span>
+                            <span class="net-up">${upIcon} ${formatBytes(n.bytes_sent)}</span>
+                            <span class="net-down">${downIcon} ${formatBytes(n.bytes_recv)}</span>
                         </div>
                     </div>
                 `).join('');
@@ -957,47 +1421,13 @@
         }
 
         function refreshAll() {
-            loadSystem();
-            loadProcesses();
-            loadPorts();
-            loadNetwork();
-            loadFiles();
+            const btn = document.querySelector('.refresh-btn');
+            btn.classList.add('spinning');
+            Promise.all([loadSystem(), loadProcesses(), loadPorts(), loadNetwork(), loadFiles()])
+                .finally(() => setTimeout(() => btn.classList.remove('spinning'), 500));
         }
 
-        // Desktop sidebar tab switch
-        function switchTab(tabName) {
-            // Update sidebar active state
-            document.querySelectorAll('.sidebar .nav-item').forEach(item => {
-                item.classList.remove('active');
-                if (item.dataset.tab === tabName) {
-                    item.classList.add('active');
-                }
-            });
-            
-            // Update bottom nav active state
-            document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
-                item.classList.remove('active');
-                if (item.dataset.tab === tabName) {
-                    item.classList.add('active');
-                }
-            });
-            
-            // Show/hide tab content
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            const targetTab = document.getElementById(tabName);
-            if (targetTab) {
-                targetTab.classList.add('active');
-            }
-            
-            // Special case for system/dashboard
-            if (tabName === 'system') {
-                document.getElementById('processes').classList.add('active');
-            }
-        }
-
+        // ========== PROCESS SEARCH ==========
         document.getElementById('process-search').addEventListener('input', function(e) {
             const f = e.target.value.toLowerCase();
             document.querySelectorAll('.process-item').forEach(r => {
@@ -1005,8 +1435,10 @@
             });
         });
 
-        // File Manager Functions
+        // ========== FILE MANAGER ==========
         let currentPath = '/root';
+        let clipboardFile = null;
+        let clipboardMode = null;
 
         async function loadFiles() {
             try {
@@ -1016,12 +1448,20 @@
                     return;
                 }
                 document.getElementById('current-path').value = d.dir;
+                
+                const folderIcon = '<svg class="file-icon folder" viewBox="0 0 16 16"><path d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31L.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3zm-8.322.12C1.72 3.042 1.95 3 2.19 3h5.4l-.5-.707 1.017-1.016a1 1 0 0 0 .293-.707V.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v.466a2.002 2.002 0 0 1-.586 1.414l-.707.707a2.5 2.5 0 0 1-1.768.732H2.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h.089z"/></svg>';
+                const fileIcon = '<svg class="file-icon" viewBox="0 0 16 16"><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/></svg>';
+                const downloadIcon = '<svg class="icon icon-sm" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>';
+                const copyIcon = '<svg class="icon icon-sm" viewBox="0 0 16 16"><path d="M4 1.5a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h2zm6 0a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h2zm-3 0a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h2zM4 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H4zm0 1h8a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>';
+                const editIcon = '<svg class="icon icon-sm" viewBox="0 0 16 16"><path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11l.178-.178z"/></svg>';
+                const trashIcon = '<svg class="icon icon-sm" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>';
+                
                 document.getElementById('files-list').innerHTML = d.files.map(f => {
-                    const icon = f.is_dir ? 'bi-folder-fill folder' : 'bi-file-earmark';
+                    const icon = f.is_dir ? folderIcon : fileIcon;
                     const isEditable = !f.is_dir && isEditableFile(f.name);
                     return `
                         <div class="file-item">
-                            <i class="bi ${icon} file-icon"></i>
+                            ${icon}
                             <div class="file-info">
                                 <div class="file-name">${f.name}</div>
                                 <div class="file-meta">${f.size_str} • ${f.mod_time}</div>
@@ -1029,14 +1469,14 @@
                             <div class="file-actions">
                                 ${f.is_dir ? 
                                     `<button class="btn-action btn-sm" onclick="openDir('${f.path}')">Open</button>` : 
-                                    `<button class="btn-action btn-sm" onclick="downloadFile('${f.path}')" style="background: #238636;">⬇️</button>`
+                                    `<button class="btn-action btn-sm" onclick="downloadFile('${f.path}')" style="background: #238636;">${downloadIcon}</button>`
                                 }
-                                <button class="btn-action btn-sm" onclick="copyToClipboard('${f.path}')" title="Copy path">📋</button>
+                                <button class="btn-action btn-sm" onclick="copyToClipboard('${f.path}')" title="Copy path">${copyIcon}</button>
                                 ${isEditable ? 
-                                    `<button class="btn-action btn-sm" onclick="editFile('${f.path}')" style="background: #58a6ff;">✏️</button>` : 
+                                    `<button class="btn-action btn-sm" onclick="editFile('${f.path}')" style="background: #58a6ff;">${editIcon}</button>` : 
                                     ''
                                 }
-                                <button class="btn-action btn-sm btn-delete" onclick="deleteFile('${f.path}', ${f.is_dir})">🗑️</button>
+                                <button class="btn-action btn-sm btn-delete" onclick="deleteFile('${f.path}', ${f.is_dir})">${trashIcon}</button>
                             </div>
                         </div>
                     `;
@@ -1046,44 +1486,29 @@
             }
         }
 
-        function openDir(path) {
-            currentPath = path;
-            loadFiles();
-        }
-
+        function openDir(path) { currentPath = path; loadFiles(); }
         function handlePathInput(event) {
             if (event.key === 'Enter') {
                 const path = document.getElementById('current-path').value.trim();
-                if (path) {
-                    currentPath = path;
-                    loadFiles();
-                }
+                if (path) { currentPath = path; loadFiles(); }
             }
         }
-
         function parentDir() {
             if (currentPath === '/') return;
-            const parent = currentPath.split('/').slice(0, -1).join('/') || '/';
-            currentPath = parent;
+            currentPath = currentPath.split('/').slice(0, -1).join('/') || '/';
             loadFiles();
         }
+        function downloadFile(path) { window.open('/api/files/download?path=' + encodeURIComponent(path), '_blank'); }
+        function goToPath(path) { currentPath = path; loadFiles(); }
 
-        function downloadFile(path) {
-            window.open('/api/files/download?path=' + encodeURIComponent(path), '_blank');
-        }
-
-        function goToPath(path) {
-            currentPath = path;
-            loadFiles();
-        }
-
-        // Bookmarks management
+        // ========== BOOKMARKS ==========
         let bookmarks = JSON.parse(localStorage.getItem('fileBookmarks') || '[]');
         
         function loadBookmarks() {
             const container = document.getElementById('bookmarks');
+            const bookmarkIcon = '<svg class="icon bookmark-icon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M4.146 3a.5.5 0 0 1 .5-.5h6.808a.5.5 0 0 1 .5.5v11.086a.5.5 0 0 1-.854.354l-2.792-2.793-2.792 2.793a.5.5 0 0 1-.854-.354V3z"/></svg>';
             const defaultBtns = `
-                <span class="bookmark-label">📌</span>
+                ${bookmarkIcon}
                 <button class="bookmark-btn" onclick="goToPath('/root')">~</button>
                 <button class="bookmark-btn" onclick="goToPath('/etc')">etc</button>
                 <button class="bookmark-btn" onclick="goToPath('/var/log')">logs</button>
@@ -1113,14 +1538,9 @@
             localStorage.setItem('fileBookmarks', JSON.stringify(bookmarks));
             loadBookmarks();
         }
-
-        // Load bookmarks on init
         loadBookmarks();
 
-        // Clipboard for copy/paste files
-        let clipboardFile = null;
-        let clipboardMode = null; // 'copy' or 'cut'
-
+        // ========== CLIPBOARD ==========
         function copyToClipboard(path) {
             clipboardFile = path;
             clipboardMode = 'copy';
@@ -1137,15 +1557,9 @@
 
         async function pasteFile() {
             if (!clipboardFile) return;
-            
             const filename = clipboardFile.split('/').pop();
             const dest = currentPath + '/' + filename;
-            
-            if (clipboardFile === dest) {
-                alert('Source and destination are the same');
-                return;
-            }
-            
+            if (clipboardFile === dest) { alert('Source and destination are the same'); return; }
             const action = clipboardMode === 'cut' ? 'move' : 'copy';
             
             try {
@@ -1155,7 +1569,6 @@
                     body: JSON.stringify({ source: clipboardFile, dest: dest })
                 });
                 const data = await r.json();
-                
                 if (data.status === 'ok') {
                     alert((clipboardMode === 'cut' ? 'Moved' : 'Copied') + ' successfully!');
                     clipboardFile = null;
@@ -1165,31 +1578,20 @@
                 } else {
                     alert('Error: ' + data.message);
                 }
-            } catch (e) {
-                alert('Error: ' + e.message);
-            }
+            } catch (e) { alert('Error: ' + e.message); }
         }
 
         async function deleteFile(path, isDir) {
             const type = isDir ? 'directory' : 'file';
             if (!confirm('Are you sure you want to delete this ' + type + '?\n\n' + path)) return;
-            
             try {
                 const r = await (await fetch('/api/files/delete/' + encodeURIComponent(path), {method: 'DELETE'})).json();
-                if (r.status === 'ok') {
-                    alert('Deleted successfully');
-                    loadFiles();
-                } else {
-                    alert('Error: ' + r.message);
-                }
-            } catch (e) {
-                alert('Failed to delete');
-            }
+                if (r.status === 'ok') { alert('Deleted successfully'); loadFiles(); }
+                else { alert('Error: ' + r.message); }
+            } catch (e) { alert('Failed to delete'); }
         }
 
-        function refreshFiles() {
-            loadFiles();
-        }
+        function refreshFiles() { loadFiles(); }
 
         function isEditableFile(filename) {
             const editableExts = ['.json', '.env', '.txt', '.xml', '.yml', '.yaml', 
@@ -1198,16 +1600,18 @@
             return editableExts.some(ext => filename.toLowerCase().endsWith(ext));
         }
 
-        function editFile(path) {
-            openEditorModal(path);
-        }
+        function editFile(path) { openEditorModal(path); }
 
-        // Modal Editor Functions
+        // ========== MODAL EDITOR ==========
         let codeEditor = null;
         let currentEditPath = '';
         let originalEditContent = '';
         let isEditModified = false;
         let currentFontSize = 14;
+
+        if (localStorage.getItem('editorFontSize')) {
+            currentFontSize = parseInt(localStorage.getItem('editorFontSize'));
+        }
 
         function changeFontSize(delta) {
             currentFontSize = Math.max(10, Math.min(24, currentFontSize + delta));
@@ -1219,25 +1623,18 @@
             localStorage.setItem('editorFontSize', currentFontSize);
         }
 
-        // Load saved font size
-        if (localStorage.getItem('editorFontSize')) {
-            currentFontSize = parseInt(localStorage.getItem('editorFontSize'));
-        }
-
         function openEditorModal(path) {
-            currentEditPath = path;
-            
-            // Clear previous editor if exists
             if (codeEditor) {
-                codeEditor.toTextArea();
+                try { codeEditor.toTextArea(); } catch (e) {}
                 codeEditor = null;
             }
-            // Clear modal editor container
-            document.getElementById('modalEditor').innerHTML = '';
+            const modalEditor = document.getElementById('modalEditor');
+            if (modalEditor) modalEditor.innerHTML = '';
             
-            // Reset state
+            currentEditPath = '';
             originalEditContent = '';
             isEditModified = false;
+            currentEditPath = path;
             
             document.getElementById('editorModal').classList.add('active');
             document.getElementById('modalTitle').textContent = path;
@@ -1248,19 +1645,17 @@
         }
 
         function closeEditorModal() {
-            if (isEditModified) {
-                if (!confirm('You have unsaved changes. Close anyway?')) {
-                    return;
-                }
-            }
+            if (isEditModified && !confirm('You have unsaved changes. Close anyway?')) return;
             document.getElementById('editorModal').classList.remove('active');
             if (codeEditor) {
-                codeEditor.toTextArea();
+                try { codeEditor.toTextArea(); } catch (e) {}
                 codeEditor = null;
             }
+            document.getElementById('modalEditor').innerHTML = '';
             currentEditPath = '';
             originalEditContent = '';
             isEditModified = false;
+            refreshFiles();
         }
 
         async function loadFileContent(path) {
@@ -1268,24 +1663,18 @@
             try {
                 const response = await fetch(`/api/files/read?path=${encodeURIComponent(path)}`);
                 const data = await response.json();
-                
                 if (data.status === 'error') {
                     document.getElementById('modalStatus').textContent = 'Error: ' + data.message;
                     return;
                 }
-                
                 originalEditContent = data.content;
                 initCodeEditor(data.content, path);
                 document.getElementById('modalStatus').textContent = 'Ready';
-            } catch (err) {
-                document.getElementById('modalStatus').textContent = 'Error loading file';
-            }
+            } catch (err) { document.getElementById('modalStatus').textContent = 'Error loading file'; }
         }
 
         function initCodeEditor(content, filename) {
             const mode = getEditorMode(filename);
-            
-            // Update font size label
             document.getElementById('fontSizeLabel').textContent = currentFontSize + 'px';
             
             codeEditor = CodeMirror(document.getElementById('modalEditor'), {
@@ -1299,8 +1688,6 @@
                 autoCloseBrackets: true,
                 matchBrackets: true
             });
-            
-            // Apply saved font size
             codeEditor.getWrapperElement().style.fontSize = currentFontSize + 'px';
             codeEditor.refresh();
 
@@ -1309,7 +1696,6 @@
                 updateModalSaveButton();
             });
 
-            // Keyboard shortcut Ctrl+S
             codeEditor.setOption('extraKeys', {
                 'Ctrl-S': () => saveModalFile(),
                 'Cmd-S': () => saveModalFile()
@@ -1329,19 +1715,15 @@
 
         function updateModalSaveButton() {
             const btn = document.getElementById('modalSaveBtn');
-            btn.disabled = false; // Enable button after file loaded
-            if (isEditModified) {
-                btn.textContent = '💾 Save *';
-                btn.style.opacity = '1';
-            } else {
-                btn.textContent = '💾 Save';
-                btn.style.opacity = '0.6';
-            }
+            btn.disabled = false;
+            btn.innerHTML = isEditModified ? 
+                '<svg class="icon icon-sm" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg> Save *' : 
+                '<svg class="icon icon-sm" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg> Save';
+            btn.style.opacity = isEditModified ? '1' : '0.6';
         }
 
         async function saveModalFile() {
             if (!codeEditor) return;
-            
             const btn = document.getElementById('modalSaveBtn');
             btn.disabled = true;
             document.getElementById('modalStatus').textContent = 'Saving...';
@@ -1350,12 +1732,8 @@
                 const response = await fetch('/api/files/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        path: currentEditPath,
-                        content: codeEditor.getValue()
-                    })
+                    body: JSON.stringify({ path: currentEditPath, content: codeEditor.getValue() })
                 });
-                
                 const data = await response.json();
                 
                 if (data.status === 'ok') {
@@ -1375,36 +1753,51 @@
             } catch (err) {
                 document.getElementById('modalStatus').textContent = 'Save failed';
                 document.getElementById('modalStatus').classList.add('error');
-            } finally {
-                btn.disabled = false;
-            }
+            } finally { btn.disabled = false; }
         }
 
+        // ========== KEYBOARD SHORTCUTS ==========
+        let selectedFilePath = '';
+        
+        document.addEventListener('keydown', function(e) {
+            const editorModal = document.getElementById('editorModal');
+            if (editorModal && editorModal.classList.contains('active')) {
+                if (e.key === 'Escape') closeEditorModal();
+                return;
+            }
+            
+            const filesTab = document.getElementById('files');
+            if (!filesTab || !filesTab.classList.contains('active')) return;
+            
+            if (e.key === 'a' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                e.preventDefault();
+                if (selectedFilePath && isEditableFile(selectedFilePath)) {
+                    editFile(selectedFilePath);
+                } else {
+                    const firstEditable = document.querySelector('.file-item button[onclick^="editFile"]');
+                    if (firstEditable) {
+                        const match = firstEditable.getAttribute('onclick').match(/editFile\('(.+?)'\)/);
+                        if (match) editFile(match[1]);
+                    }
+                }
+            }
+        });
+        
+        document.addEventListener('click', function(e) {
+            const fileItem = e.target.closest('.file-item');
+            if (fileItem) {
+                const fileNameEl = fileItem.querySelector('.file-name');
+                if (fileNameEl) {
+                    selectedFilePath = document.getElementById('current-path').value + '/' + fileNameEl.textContent;
+                }
+            }
+        });
+
+        // ========== INITIAL LOAD ==========
         refreshAll();
         setInterval(loadSystem, 3000);
         setInterval(loadProcesses, 8000);
     </script>
-    </div>
-
-    <!-- Editor Modal -->
-    <div class="modal-overlay" id="editorModal">
-        <div class="modal-container">
-            <div class="modal-header">
-                <span class="modal-title" id="modalTitle">editor</span>
-                <div class="font-controls">
-                    <button class="font-btn" onclick="changeFontSize(-1)">A-</button>
-                    <span class="font-size-label" id="fontSizeLabel">14px</span>
-                    <button class="font-btn" onclick="changeFontSize(1)">A+</button>
-                </div>
-                <button class="modal-close" onclick="closeEditorModal()">✕ Close</button>
-            </div>
-            <div class="modal-body" id="modalEditor"></div>
-            <div class="modal-footer">
-                <span class="modal-status" id="modalStatus">Ready</span>
-                <button class="btn btn-save" id="modalSaveBtn" onclick="saveModalFile()" disabled>💾 Save</button>
-            </div>
-        </div>
-    </div>
 
     <!-- CodeMirror -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
@@ -1423,6 +1816,5 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/css/css.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script>
-
-    <script></body>
+</body>
 </html>
