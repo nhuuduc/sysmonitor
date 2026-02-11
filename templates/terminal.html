@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Terminal - SysMonitor</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            background: #0d1117;
+            color: #c9d1d9;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        
+        .btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        
+        .btn-back {
+            background: #21262d;
+            color: #c9d1d9;
+        }
+        .btn-back:hover { background: #30363d; }
+        
+        .title {
+            flex: 1;
+            font-weight: 600;
+            color: #3fb950;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: #21262d;
+            color: #8b949e;
+        }
+        .status.connected { background: #238636; color: white; }
+        .status.disconnected { background: #da3633; color: white; }
+        
+        .font-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: #21262d;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+        
+        .font-btn {
+            background: transparent;
+            border: none;
+            color: #8b949e;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 14px;
+            border-radius: 4px;
+        }
+        .font-btn:hover { background: #30363d; color: #c9d1d9; }
+        
+        .font-size {
+            color: #58a6ff;
+            font-size: 12px;
+            min-width: 35px;
+            text-align: center;
+        }
+        
+        .terminal-container {
+            flex: 1;
+            padding: 8px;
+            background: #0d1117;
+            overflow: hidden;
+        }
+        
+        #terminal {
+            height: 100%;
+            width: 100%;
+        }
+        
+        .xterm {
+            height: 100%;
+            padding: 8px;
+        }
+        
+        .xterm-viewport {
+            overflow-y: auto !important;
+        }
+        
+        /* Scrollbar styling */
+        .xterm-viewport::-webkit-scrollbar {
+            width: 10px;
+        }
+        .xterm-viewport::-webkit-scrollbar-track {
+            background: #21262d;
+        }
+        .xterm-viewport::-webkit-scrollbar-thumb {
+            background: #484f58;
+            border-radius: 5px;
+        }
+        .xterm-viewport::-webkit-scrollbar-thumb:hover {
+            background: #6e7681;
+        }
+        
+        @media (max-width: 768px) {
+            .header { padding: 8px 12px; flex-wrap: wrap; }
+            .title { order: -1; width: 100%; margin-bottom: 8px; }
+            .btn { padding: 6px 10px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="btn btn-back">🔙 Dashboard</a>
+        <div class="title">
+            <span>🖥️</span>
+            <span>Terminal</span>
+        </div>
+        <div class="font-controls">
+            <button class="font-btn" onclick="changeFontSize(-1)">A-</button>
+            <span class="font-size" id="fontSize">16</span>
+            <button class="font-btn" onclick="changeFontSize(1)">A+</button>
+        </div>
+        <span class="status" id="status">Connecting...</span>
+    </div>
+    
+    <div class="terminal-container">
+        <div id="terminal"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.min.js"></script>
+    
+    <script>
+        let term = null;
+        let ws = null;
+        let fitAddon = null;
+        let currentFontSize = parseInt(localStorage.getItem('terminalFontSize')) || 16;
+        
+        // Update font size display
+        document.getElementById('fontSize').textContent = currentFontSize;
+        
+        function initTerminal() {
+            term = new Terminal({
+                cursorBlink: true,
+                cursorStyle: 'bar',
+                fontSize: currentFontSize,
+                fontFamily: '"JetBrains Mono", "Fira Code", "SF Mono", Monaco, "Cascadia Code", Consolas, monospace',
+                fontWeight: '400',
+                fontWeightBold: '500',
+                letterSpacing: 0,
+                lineHeight: 1.2,
+                scrollback: 5000,
+                theme: {
+                    background: '#0d1117',
+                    foreground: '#c9d1d9',
+                    cursor: '#58a6ff',
+                    cursorAccent: '#0d1117',
+                    selection: 'rgba(88, 166, 255, 0.3)',
+                    black: '#484f58',
+                    red: '#ff7b72',
+                    green: '#3fb950',
+                    yellow: '#d29922',
+                    blue: '#58a6ff',
+                    magenta: '#bc8cff',
+                    cyan: '#39c5cf',
+                    white: '#b1bac4',
+                    brightBlack: '#6e7681',
+                    brightRed: '#ffa198',
+                    brightGreen: '#56d364',
+                    brightYellow: '#e3b341',
+                    brightBlue: '#79c0ff',
+                    brightMagenta: '#d2a8ff',
+                    brightCyan: '#56d4dd',
+                    brightWhite: '#f0f6fc'
+                }
+            });
+            
+            fitAddon = new FitAddon.FitAddon();
+            const webLinksAddon = new WebLinksAddon.WebLinksAddon();
+            
+            term.loadAddon(fitAddon);
+            term.loadAddon(webLinksAddon);
+            
+            term.open(document.getElementById('terminal'));
+            fitAddon.fit();
+            
+            // Connect WebSocket
+            connectWebSocket();
+            
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                fitAddon.fit();
+                sendResize();
+            });
+            
+            // Handle input
+            term.onData(data => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(data);
+                }
+            });
+            
+            // Focus terminal
+            term.focus();
+        }
+        
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/terminal`;
+            
+            ws = new WebSocket(wsUrl);
+            ws.binaryType = 'arraybuffer';
+            
+            ws.onopen = () => {
+                updateStatus('connected', 'Connected');
+                sendResize();
+                term.focus();
+            };
+            
+            ws.onmessage = (event) => {
+                const data = new Uint8Array(event.data);
+                term.write(data);
+            };
+            
+            ws.onclose = () => {
+                updateStatus('disconnected', 'Disconnected');
+                term.write('\r\n\x1b[31m[Connection closed. Refresh to reconnect]\x1b[0m\r\n');
+            };
+            
+            ws.onerror = (error) => {
+                updateStatus('disconnected', 'Error');
+                console.error('WebSocket error:', error);
+            };
+        }
+        
+        function sendResize() {
+            if (ws && ws.readyState === WebSocket.OPEN && term) {
+                const dims = fitAddon.proposeDimensions();
+                if (dims) {
+                    ws.send(JSON.stringify({ cols: dims.cols, rows: dims.rows }));
+                }
+            }
+        }
+        
+        function updateStatus(type, text) {
+            const status = document.getElementById('status');
+            status.textContent = text;
+            status.className = 'status ' + type;
+        }
+        
+        function changeFontSize(delta) {
+            currentFontSize = Math.max(10, Math.min(24, currentFontSize + delta));
+            document.getElementById('fontSize').textContent = currentFontSize;
+            localStorage.setItem('terminalFontSize', currentFontSize);
+            
+            if (term) {
+                term.options.fontSize = currentFontSize;
+                fitAddon.fit();
+                sendResize();
+            }
+        }
+        
+        // Initialize on load
+        initTerminal();
+    </script>
+</body>
+</html>

@@ -493,6 +493,12 @@ func main() {
 		http.ServeFile(w, r, "templates/editor.html")
 	}))
 	
+	// Terminal page and WebSocket
+	r.HandleFunc("/terminal", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "templates/terminal.html")
+	}))
+	r.HandleFunc("/ws/terminal", authMiddleware(terminalHandler))
+	
 	port := ":8090"
 	fmt.Printf("🚀 SysMonitor with Auth0 running on http://localhost%s\n", port)
 	log.Fatal(http.ListenAndServe(port, r))
