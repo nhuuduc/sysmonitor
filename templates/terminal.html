@@ -354,6 +354,14 @@
         let compositionBuffer = '';
         let ctrlActive = false;
         
+        // Connection management
+        let lastActivity = Date.now();
+        let inactivityTimer = null;
+        let keepAliveTimer = null;
+        const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 minutes
+        const KEEP_ALIVE_INTERVAL = 30 * 1000; // 30 seconds
+        const WARNING_BEFORE = 60 * 1000; // 1 minute warning
+        
         // Update font size display
         document.getElementById('fontSize').textContent = currentFontSize;
         
@@ -434,7 +442,13 @@
                         ws.send(data);
                     }
                 }
+                // Track user activity
+                resetActivityTimer();
             });
+            
+            // Track user activity
+            term.element.addEventListener('click', resetActivityTimer);
+            term.element.addEventListener('touchstart', resetActivityTimer);
             
             // Focus terminal
             term.focus();
@@ -537,15 +551,20 @@
                 updateStatus('connected', 'Connected');
                 sendResize();
                 term.focus();
+                startKeepAlive();
+                resetActivityTimer();
             };
             
             ws.onmessage = (event) => {
                 const data = new Uint8Array(event.data);
                 term.write(data);
+                resetActivityTimer();
             };
             
             ws.onclose = () => {
                 updateStatus('disconnected', 'Disconnected');
+                stopKeepAlive();
+                stopInactivityTimer();
                 term.write('\r\n\x1b[31m[Connection closed. Refresh to reconnect]\x1b[0m\r\n');
             };
             
@@ -553,6 +572,61 @@
                 updateStatus('disconnected', 'Error');
                 console.error('WebSocket error:', error);
             };
+        }
+        
+        function startKeepAlive() {
+            // Send keep-alive ping every 30 seconds
+            keepAliveTimer = setInterval(() => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'ping' }));
+                }
+            }, KEEP_ALIVE_INTERVAL);
+        }
+        
+        function stopKeepAlive() {
+            if (keepAliveTimer) {
+                clearInterval(keepAliveTimer);
+                keepAliveTimer = null;
+            }
+        }
+        
+        function resetActivityTimer() {
+            lastActivity = Date.now();
+            
+            // Clear existing timer
+            if (inactivityTimer) {
+                clearTimeout(inactivityTimer);
+            }
+            
+            // Set new timer for inactivity check
+            inactivityTimer = setTimeout(checkInactivity, WARNING_BEFORE);
+        }
+        
+        function stopInactivityTimer() {
+            if (inactivityTimer) {
+                clearTimeout(inactivityTimer);
+                inactivityTimer = null;
+            }
+        }
+        
+        function checkInactivity() {
+            const inactiveTime = Date.now() - lastActivity;
+            const remainingTime = INACTIVITY_LIMIT - inactiveTime;
+            
+            if (remainingTime <= 0) {
+                // Close connection due to inactivity
+                term.write(`\r\n\x1b[33m[Connection closed due to ${Math.floor(INACTIVITY_LIMIT/60000)} minutes of inactivity]\x1b[0m\r\n`);
+                if (ws) {
+                    ws.close();
+                }
+            } else if (remainingTime <= WARNING_BEFORE) {
+                // Show warning
+                const seconds = Math.ceil(remainingTime / 1000);
+                term.write(`\r\n\x1b[33m[Warning: Connection will close in ${seconds}s due to inactivity]\x1b[0m\r\n`);
+                
+                // Check again after remaining time
+                inactivityTimer = setTimeout(checkInactivity, remainingTime);
+            }
         }
         
         function sendResize() {
@@ -598,6 +672,9 @@
         function sendKey(key) {
             if (!ws || ws.readyState !== WebSocket.OPEN) return;
             
+            // Track activity
+            resetActivityTimer();
+            
             if (ctrlActive) {
                 // If Ctrl is active, send Ctrl+key combination
                 const ctrlKey = String.fromCharCode(key.charCodeAt(0) & 0x1f);
@@ -620,6 +697,7 @@
                 if (text && ws && ws.readyState === WebSocket.OPEN) {
                     const encoder = new TextEncoder();
                     ws.send(encoder.encode(text));
+                    resetActivityTimer();
                 }
             }
         });
