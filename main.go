@@ -428,6 +428,71 @@ func main() {
 		json.NewEncoder(w).Encode(getNetworkStats())
 	}))
 	
+	r.HandleFunc("/api/files/save", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Path    string `json:"path"`
+			Content string `json:"content"`
+		}
+		json.NewDecoder(r.Body).Decode(&req)
+		
+		// Validate path
+		if req.Path == "" {
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Path required"})
+			return
+		}
+		if !strings.HasPrefix(req.Path, "/") {
+			req.Path = "/" + req.Path
+		}
+		
+		err := os.WriteFile(req.Path, []byte(req.Content), 0644)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": err.Error()})
+		} else {
+			json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": "Saved successfully"})
+		}
+	})).Methods("POST")
+	
+	// File read API
+	r.HandleFunc("/api/files/read", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Query().Get("path")
+		if path == "" {
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Path required"})
+			return
+		}
+		if !strings.HasPrefix(path, "/") {
+			path = "/" + path
+		}
+		
+		// Check file size (max 1MB)
+		info, err := os.Stat(path)
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": err.Error()})
+			return
+		}
+		if info.Size() > 1024*1024 {
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "File too large (max 1MB)"})
+			return
+		}
+		
+		content, err := os.ReadFile(path)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": err.Error()})
+		} else {
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":  "ok",
+				"path":    path,
+				"content": string(content),
+			})
+		}
+	}))
+	
+	// Editor page
+	r.HandleFunc("/editor", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "templates/editor.html")
+	}))
+	
 	port := ":8090"
 	fmt.Printf("🚀 SysMonitor with Auth0 running on http://localhost%s\n", port)
 	log.Fatal(http.ListenAndServe(port, r))

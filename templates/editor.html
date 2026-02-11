@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Editor - SysMonitor</title>
+    <!-- CodeMirror -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <!-- Modes -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/yaml/yaml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/shell/shell.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/go/go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/sql/sql.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/markdown/markdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/nginx/nginx.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/properties/properties.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #0d1117;
+            color: #c9d1d9;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .btn-back {
+            background: #21262d;
+            color: #c9d1d9;
+        }
+        .btn-back:hover { background: #30363d; }
+        .btn-save {
+            background: #238636;
+            color: white;
+        }
+        .btn-save:hover { background: #2ea043; }
+        .btn-save:disabled {
+            background: #484f58;
+            cursor: not-allowed;
+        }
+        .file-path {
+            flex: 1;
+            font-family: monospace;
+            font-size: 14px;
+            color: #58a6ff;
+            word-break: break-all;
+        }
+        .status {
+            font-size: 12px;
+            color: #8b949e;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .status.success { background: #238636; color: white; }
+        .status.error { background: #da3633; color: white; }
+        .editor-container {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        .CodeMirror {
+            height: 100% !important;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #8b949e;
+        }
+        .error-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            padding: 40px;
+            background: #161b22;
+            border: 1px solid #da3633;
+            border-radius: 8px;
+        }
+        @media (max-width: 768px) {
+            .header { padding: 10px; }
+            .file-path { font-size: 12px; width: 100%; order: 3; }
+            .btn { padding: 6px 12px; font-size: 13px; }
+            .CodeMirror { font-size: 13px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="btn btn-back">🔙 Back</a>
+        <span class="file-path" id="filePath">Loading...</span>
+        <span class="status" id="status"></span>
+        <button class="btn btn-save" id="saveBtn" onclick="saveFile()" disabled>
+            💾 Save
+        </button>
+    </div>
+    <div class="editor-container" id="editorContainer">
+        <div class="loading" id="loading">📄 Loading file...</div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const filePath = urlParams.get('path');
+        let editor = null;
+        let originalContent = '';
+        let isModified = false;
+
+        function getLanguageMode(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const modes = {
+                'js': 'javascript',
+                'json': 'javascript',
+                'go': 'go',
+                'py': 'python',
+                'sql': 'sql',
+                'xml': 'xml',
+                'html': 'xml',
+                'yml': 'yaml',
+                'yaml': 'yaml',
+                'md': 'markdown',
+                'sh': 'shell',
+                'env': 'shell',
+                'conf': 'nginx',
+                'ini': 'properties',
+                'toml': 'properties',
+                'txt': 'text',
+                'css': 'css'
+            };
+            return modes[ext] || 'text';
+        }
+
+        async function loadFile() {
+            if (!filePath) {
+                showError('No file path specified');
+                return;
+            }
+
+            document.getElementById('filePath').textContent = filePath;
+
+            try {
+                const response = await fetch(`/api/files/read?path=${encodeURIComponent(filePath)}`);
+                const data = await response.json();
+
+                if (data.status === 'error') {
+                    showError(data.message);
+                    return;
+                }
+
+                originalContent = data.content;
+                initEditor(data.content);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('saveBtn').disabled = false;
+                updateStatus('Ready', '');
+            } catch (err) {
+                showError('Failed to load file: ' + err.message);
+            }
+        }
+
+        function initEditor(content) {
+            const mode = getLanguageMode(filePath);
+            
+            editor = CodeMirror(document.getElementById('editorContainer'), {
+                value: content,
+                mode: mode,
+                theme: 'dracula',
+                lineNumbers: true,
+                lineWrapping: true,
+                tabSize: 2,
+                indentWithTabs: false,
+                autoCloseBrackets: true,
+                matchBrackets: true,
+                scrollbarStyle: 'overlay'
+            });
+
+            editor.on('change', () => {
+                isModified = editor.getValue() !== originalContent;
+                updateSaveButton();
+            });
+
+            // Handle keyboard shortcuts
+            editor.setOption('extraKeys', {
+                'Ctrl-S': (cm) => { saveFile(); },
+                'Cmd-S': (cm) => { saveFile(); }
+            });
+        }
+
+        function updateSaveButton() {
+            const btn = document.getElementById('saveBtn');
+            if (isModified) {
+                btn.textContent = '💾 Save *';
+                btn.style.background = '#2ea043';
+            } else {
+                btn.textContent = '💾 Save';
+                btn.style.background = '#238636';
+            }
+        }
+
+        function updateStatus(text, type) {
+            const status = document.getElementById('status');
+            status.textContent = text;
+            status.className = 'status ' + type;
+        }
+
+        async function saveFile() {
+            if (!editor || !isModified) return;
+
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = true;
+            updateStatus('Saving...', '');
+
+            try {
+                const response = await fetch('/api/files/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        path: filePath,
+                        content: editor.getValue()
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'ok') {
+                    originalContent = editor.getValue();
+                    isModified = false;
+                    updateSaveButton();
+                    updateStatus('Saved!', 'success');
+                    setTimeout(() => updateStatus('Ready', ''), 2000);
+                } else {
+                    updateStatus('Error!', 'error');
+                    alert('Save failed: ' + data.message);
+                }
+            } catch (err) {
+                updateStatus('Error!', 'error');
+                alert('Save failed: ' + err.message);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('editorContainer').innerHTML = `
+                <div class="error-message">
+                    <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                    <h3 style="color: #f85149; margin-bottom: 8px;">Error</h3>
+                    <p>${message}</p>
+                    <br>
+                    <a href="/" style="color: #58a6ff;">← Back to Dashboard</a>
+                </div>
+            `;
+        }
+
+        // Warn before leaving if unsaved changes
+        window.onbeforeunload = () => {
+            if (isModified) {
+                return 'You have unsaved changes. Are you sure you want to leave?';
+            }
+        };
+
+        // Load file on page load
+        loadFile();
+    </script>
+</body>
+</html>

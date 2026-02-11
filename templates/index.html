@@ -620,6 +620,7 @@
                 document.getElementById('current-path').value = d.dir;
                 document.getElementById('files-list').innerHTML = d.files.map(f => {
                     const icon = f.is_dir ? 'bi-folder-fill folder' : 'bi-file-earmark';
+                    const isEditable = !f.is_dir && isEditableFile(f.name);
                     return `
                         <div class="file-item">
                             <i class="bi ${icon} file-icon"></i>
@@ -630,6 +631,10 @@
                             <div class="file-actions">
                                 ${f.is_dir ? 
                                     `<button class="btn-action btn-sm" onclick="openDir('${f.path}')">Open</button>` : 
+                                    ''
+                                }
+                                ${isEditable ? 
+                                    `<button class="btn-action btn-sm" onclick="editFile('${f.path}')" style="background: #58a6ff;">✏️ Edit</button>` : 
                                     ''
                                 }
                                 <button class="btn-action btn-sm btn-delete" onclick="deleteFile('${f.path}', ${f.is_dir})">Delete</button>
@@ -673,6 +678,17 @@
 
         function refreshFiles() {
             loadFiles();
+        }
+
+        function isEditableFile(filename) {
+            const editableExts = ['.json', '.env', '.txt', '.xml', '.yml', '.yaml', 
+                                  '.md', '.js', '.go', '.py', '.sql', '.html', '.css', 
+                                  '.conf', '.ini', '.toml', '.sh', '.log'];
+            return editableExts.some(ext => filename.toLowerCase().endsWith(ext));
+        }
+
+        function editFile(path) {
+            window.open(`/editor?path=${encodeURIComponent(path)}`, '_blank');
         }
 
         refreshAll();
