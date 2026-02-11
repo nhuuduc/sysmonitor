@@ -518,6 +518,190 @@
             background: #0d1117;
         }
         
+        /* ========== DESKTOP LAYOUT ========== */
+        @media (min-width: 1024px) {
+            body {
+                padding-bottom: 0;
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+            }
+            
+            .navbar {
+                padding: 12px 24px;
+            }
+            
+            .navbar-brand {
+                font-size: 1.3rem;
+            }
+            
+            /* Main Layout */
+            .main-wrapper {
+                display: flex;
+                flex: 1;
+                overflow: hidden;
+            }
+            
+            /* Sidebar */
+            .sidebar {
+                width: 240px;
+                background: #161b22;
+                border-right: 1px solid #30363d;
+                display: flex;
+                flex-direction: column;
+                flex-shrink: 0;
+            }
+            
+            .sidebar .nav-item {
+                display: flex;
+                align-items: center;
+                padding: 14px 20px;
+                color: #8b949e;
+                text-decoration: none;
+                border-left: 3px solid transparent;
+                transition: all 0.2s;
+            }
+            
+            .sidebar .nav-item:hover {
+                background: #21262d;
+                color: #c9d1d9;
+            }
+            
+            .sidebar .nav-item.active {
+                background: #21262d;
+                color: #58a6ff;
+                border-left-color: #58a6ff;
+            }
+            
+            .sidebar .nav-item i {
+                font-size: 1.2rem;
+                margin-right: 12px;
+                width: 24px;
+                text-align: center;
+            }
+            
+            /* Content Area */
+            .content-area {
+                flex: 1;
+                overflow-y: auto;
+                padding: 24px;
+            }
+            
+            /* Stats Grid Desktop */
+            .stats-container {
+                padding: 0;
+                margin-bottom: 24px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 16px;
+            }
+            
+            .stat-card {
+                padding: 20px;
+                border-radius: 12px;
+            }
+            
+            .stat-value {
+                font-size: 2.2rem;
+            }
+            
+            /* Tables Desktop */
+            .card {
+                border-radius: 12px;
+                margin-bottom: 20px;
+            }
+            
+            .process-item, .port-item, .network-item, .file-item {
+                padding: 14px 20px;
+            }
+            
+            .process-name {
+                font-size: 0.95rem;
+            }
+            
+            /* Desktop Table View */
+            .desktop-table {
+                display: none;
+            }
+            
+            .mobile-list {
+                display: block;
+            }
+            
+            /* Tab Content */
+            .tab-content {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            /* Hide mobile bottom nav */
+            .bottom-nav {
+                display: none !important;
+            }
+            
+            /* Files Grid */
+            .file-item {
+                display: grid;
+                grid-template-columns: auto 1fr auto auto;
+                gap: 16px;
+                align-items: center;
+            }
+            
+            .file-actions {
+                gap: 10px;
+            }
+            
+            /* Section titles */
+            .section-title {
+                font-size: 0.9rem;
+                margin: 0 0 16px 0;
+            }
+            
+            /* Search box */
+            .search-box {
+                max-width: 400px;
+            }
+        }
+        
+        /* Extra large screens */
+        @media (min-width: 1440px) {
+            .sidebar {
+                width: 280px;
+            }
+            
+            .content-area {
+                padding: 32px 40px;
+            }
+            
+            .stats-grid {
+                gap: 20px;
+            }
+            
+            .stat-card {
+                padding: 24px;
+            }
+            
+            .stat-value {
+                font-size: 2.5rem;
+            }
+        }
+        
+        /* Sidebar hidden on mobile by default */
+        .sidebar {
+            display: none;
+        }
+        
+        .main-wrapper {
+            display: block;
+        }
+        
+        .content-area {
+            display: block;
+        }
+        
         /* Hide scrollbar */
         ::-webkit-scrollbar { width: 0; height: 0; }
     </style>
@@ -532,7 +716,33 @@
         </div>
     </nav>
 
-    <div class="stats-container">
+    <!-- Main Wrapper for Desktop Sidebar Layout -->
+    <div class="main-wrapper">
+        <!-- Desktop Sidebar -->
+        <aside class="sidebar">
+            <a href="#" class="nav-item active" data-tab="system" onclick="switchTab('system')">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+            <a href="#" class="nav-item" data-tab="processes" onclick="switchTab('processes')">
+                <i class="bi bi-list-task"></i> Processes
+            </a>
+            <a href="#" class="nav-item" data-tab="ports" onclick="switchTab('ports')">
+                <i class="bi bi-broadcast"></i> Ports
+            </a>
+            <a href="#" class="nav-item" data-tab="network" onclick="switchTab('network')">
+                <i class="bi bi-wifi"></i> Network
+            </a>
+            <a href="#" class="nav-item" data-tab="files" onclick="switchTab('files')">
+                <i class="bi bi-folder"></i> Files
+            </a>
+            <a href="/terminal" target="_blank" class="nav-item" style="margin-top: auto; border-top: 1px solid #30363d;">
+                <i class="bi bi-terminal"></i> Terminal
+            </a>
+        </aside>
+
+        <!-- Content Area -->
+        <main class="content-area">
+            <div class="stats-container">
         <div class="stats-grid">
             <div class="stat-card">
                 <i class="bi bi-cpu stat-icon cpu"></i>
@@ -592,6 +802,8 @@
     </div>
 
     <button class="refresh-btn" onclick="refreshAll()"><i class="bi bi-arrow-clockwise"></i></button>
+        </main>
+    </div><!-- End main-wrapper -->
 
     <nav class="bottom-nav">
         <a href="#" class="nav-item active" data-tab="processes"><i class="bi bi-list-task"></i>Processes</a>
@@ -706,6 +918,40 @@
             loadPorts();
             loadNetwork();
             loadFiles();
+        }
+
+        // Desktop sidebar tab switch
+        function switchTab(tabName) {
+            // Update sidebar active state
+            document.querySelectorAll('.sidebar .nav-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.tab === tabName) {
+                    item.classList.add('active');
+                }
+            });
+            
+            // Update bottom nav active state
+            document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.tab === tabName) {
+                    item.classList.add('active');
+                }
+            });
+            
+            // Show/hide tab content
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            const targetTab = document.getElementById(tabName);
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
+            
+            // Special case for system/dashboard
+            if (tabName === 'system') {
+                document.getElementById('processes').classList.add('active');
+            }
         }
 
         document.getElementById('process-search').addEventListener('input', function(e) {
