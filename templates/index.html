@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SysMonitor Pro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            background: #0d1117;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            padding-bottom: 70px;
+            overflow-x: hidden;
+        }
+        
+        /* Navbar */
+        .navbar {
+            background: #161b22;
+            padding: 14px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid #30363d;
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #58a6ff;
+        }
+        
+        .live-time {
+            font-size: 0.85rem;
+            color: #8b949e;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #3fb950;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        
+        /* Stats Grid */
+        .stats-container {
+            padding: 12px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .stat-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        
+        .stat-icon {
+            font-size: 1.4rem;
+            margin-bottom: 8px;
+        }
+        
+        .stat-icon.cpu { color: #58a6ff; }
+        .stat-icon.mem { color: #a371f7; }
+        .stat-icon.disk { color: #f0883e; }
+        .stat-icon.time { color: #3fb950; }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #58a6ff;
+        }
+        
+        .stat-value.mem { color: #a371f7; }
+        .stat-value.disk { color: #f0883e; }
+        .stat-value.time { color: #3fb950; font-size: 1.3rem; }
+        
+        .stat-label {
+            color: #c9d1d9;
+            font-size: 0.85rem;
+            margin-top: 4px;
+        }
+        
+        .stat-sub {
+            font-size: 0.75rem;
+            color: #8b949e;
+            margin-top: 2px;
+        }
+        
+        .progress {
+            height: 4px;
+            background: #21262d;
+            border-radius: 2px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+        
+        .progress-bar.cpu { background: #58a6ff; }
+        .progress-bar.mem { background: #a371f7; }
+        .progress-bar.disk { background: #f0883e; }
+        
+        /* Content */
+        .content {
+            padding: 0 12px;
+        }
+        
+        .section-title {
+            font-size: 0.8rem;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 16px 0 10px 4px;
+        }
+        
+        .search-box {
+            width: 100%;
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 12px 14px;
+            color: #c9d1d9;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: #58a6ff;
+        }
+        
+        .search-box::placeholder {
+            color: #6e7681;
+        }
+        
+        /* Process List */
+        .list-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .process-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 14px;
+            border-bottom: 1px solid #21262d;
+        }
+        
+        .process-item:last-child {
+            border-bottom: none;
+        }
+        
+        .process-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .process-name {
+            color: #c9d1d9;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .process-meta {
+            display: flex;
+            gap: 14px;
+            margin-top: 4px;
+            font-size: 0.8rem;
+            color: #8b949e;
+        }
+        
+        .btn-kill {
+            background: #da3633;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            flex-shrink: 0;
+            margin-left: 10px;
+        }
+        
+        /* Port List */
+        .port-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            border-bottom: 1px solid #21262d;
+        }
+        
+        .port-item:last-child { border-bottom: none; }
+        
+        .port-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .badge {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        .badge-tcp { background: #238636; color: #fff; }
+        .badge-udp { background: #9e6a03; color: #fff; }
+        
+        .port-num {
+            font-weight: 700;
+            color: #58a6ff;
+            font-size: 1rem;
+        }
+        
+        .port-process {
+            color: #8b949e;
+            font-size: 0.8rem;
+        }
+        
+        /* Network */
+        .network-item {
+            padding: 12px 14px;
+            border-bottom: 1px solid #21262d;
+        }
+        
+        .network-item:last-child { border-bottom: none; }
+        
+        .network-name {
+            font-weight: 600;
+            color: #c9d1d9;
+            margin-bottom: 6px;
+        }
+        
+        .network-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 0.8rem;
+        }
+        
+        .net-up { color: #3fb950; }
+        .net-down { color: #58a6ff; }
+        
+        /* Bottom Nav */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #161b22;
+            border-top: 1px solid #30363d;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0;
+            padding-bottom: max(8px, env(safe-area-inset-bottom));
+            z-index: 100;
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 6px 20px;
+            color: #8b949e;
+            text-decoration: none;
+            font-size: 0.7rem;
+            border-radius: 8px;
+        }
+        
+        .nav-item i {
+            font-size: 1.2rem;
+            margin-bottom: 2px;
+        }
+        
+        .nav-item.active {
+            color: #58a6ff;
+            background: rgba(88, 166, 255, 0.1);
+        }
+        
+        /* Refresh Button */
+        .refresh-btn {
+            position: fixed;
+            bottom: 75px;
+            right: 14px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #58a6ff, #a371f7);
+            border: none;
+            box-shadow: 0 4px 12px rgba(88, 166, 255, 0.3);
+            z-index: 99;
+            color: #fff;
+            font-size: 1.2rem;
+        }
+        
+        /* Tab Panes */
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+        
+        /* File Manager */
+        .file-toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-action {
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 10px 16px;
+            color: #c9d1d9;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .btn-action:hover {
+            background: #30363d;
+        }
+        
+        .btn-delete {
+            background: #da3633;
+            border-color: #da3633;
+            color: #fff;
+        }
+        
+        .btn-delete:hover {
+            background: #b02a26;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 14px;
+            border-bottom: 1px solid #21262d;
+            gap: 10px;
+        }
+        
+        .file-item:last-child {
+            border-bottom: none;
+        }
+        
+        .file-icon {
+            font-size: 1.3rem;
+            color: #8b949e;
+        }
+        
+        .file-icon.folder {
+            color: #58a6ff;
+        }
+        
+        .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .file-name {
+            color: #c9d1d9;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .file-meta {
+            font-size: 0.75rem;
+            color: #6e7681;
+            margin-top: 2px;
+        }
+        
+        .file-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 0.75rem;
+            border-radius: 6px;
+        }
+        
+        /* Hide scrollbar */
+        ::-webkit-scrollbar { width: 0; height: 0; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <span class="navbar-brand"><i class="bi bi-cpu"></i> SysMonitor</span>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <span class="live-time"><span class="status-dot"></span><span id="live-time">--:--</span></span>
+            <a href="/logout" style="color: #f85149; text-decoration: none; font-size: 14px;"><i class="bi bi-box-arrow-right"></i> Logout</a>
+        </div>
+    </nav>
+
+    <div class="stats-container">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <i class="bi bi-cpu stat-icon cpu"></i>
+                <div class="stat-value" id="cpu-percent">--%</div>
+                <div class="stat-label">CPU</div>
+                <div class="progress"><div class="progress-bar cpu" id="cpu-bar"></div></div>
+            </div>
+            <div class="stat-card">
+                <i class="bi bi-memory stat-icon mem"></i>
+                <div class="stat-value mem" id="mem-percent">--%</div>
+                <div class="stat-label">Memory</div>
+                <div class="stat-sub"><span id="mem-used">-</span>/<span id="mem-total">-</span> MB</div>
+                <div class="progress"><div class="progress-bar mem" id="mem-bar"></div></div>
+            </div>
+            <div class="stat-card">
+                <i class="bi bi-hdd stat-icon disk"></i>
+                <div class="stat-value disk" id="disk-percent">--%</div>
+                <div class="stat-label">Disk</div>
+                <div class="stat-sub"><span id="disk-used">-</span>/<span id="disk-total">-</span> GB</div>
+                <div class="progress"><div class="progress-bar disk" id="disk-bar"></div></div>
+            </div>
+            <div class="stat-card">
+                <i class="bi bi-clock stat-icon time"></i>
+                <div class="stat-value time" id="uptime">--</div>
+                <div class="stat-label">Uptime</div>
+                <div class="stat-sub" id="hostname">-</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="tab-pane active" id="processes">
+            <div class="section-title">Processes</div>
+            <input type="text" class="search-box" id="process-search" placeholder="🔍 Search...">
+            <div class="list-card" id="process-list"></div>
+        </div>
+        
+        <div class="tab-pane" id="ports">
+            <div class="section-title">Listening Ports</div>
+            <div class="list-card" id="ports-list"></div>
+        </div>
+        
+        <div class="tab-pane" id="network">
+            <div class="section-title">Network Interfaces</div>
+            <div class="list-card" id="network-list"></div>
+        </div>
+        
+        <div class="tab-pane" id="files">
+            <div class="section-title">File Manager</div>
+            <div class="file-toolbar">
+                <input type="text" class="search-box" id="current-path" value="/root" readonly>
+                <button class="btn-action" onclick="parentDir()"><i class="bi bi-arrow-up"></i> Up</button>
+                <button class="btn-action" onclick="refreshFiles()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+            </div>
+            <div class="list-card" id="files-list"></div>
+        </div>
+    </div>
+
+    <button class="refresh-btn" onclick="refreshAll()"><i class="bi bi-arrow-clockwise"></i></button>
+
+    <nav class="bottom-nav">
+        <a href="#" class="nav-item active" data-tab="processes"><i class="bi bi-list-task"></i>Processes</a>
+        <a href="#" class="nav-item" data-tab="ports"><i class="bi bi-plug"></i>Ports</a>
+        <a href="#" class="nav-item" data-tab="network"><i class="bi bi-wifi"></i>Network</a>
+        <a href="#" class="nav-item" data-tab="files"><i class="bi bi-folder"></i>Files</a>
+    </nav>
+
+    <script>
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+                this.classList.add('active');
+                document.getElementById(this.dataset.tab).classList.add('active');
+            });
+        });
+
+        function formatBytes(b) {
+            if (b === 0) return '0 B';
+            const k = 1024, s = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(b) / Math.log(k));
+            return (b / Math.pow(k, i)).toFixed(1) + ' ' + s[i];
+        }
+
+        function updateTime() {
+            document.getElementById('live-time').textContent = new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'});
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        async function loadSystem() {
+            try {
+                const d = await (await fetch('/api/system')).json();
+                document.getElementById('cpu-percent').textContent = d.cpu_percent.toFixed(0) + '%';
+                document.getElementById('cpu-bar').style.width = d.cpu_percent + '%';
+                document.getElementById('mem-percent').textContent = d.mem_percent.toFixed(0) + '%';
+                document.getElementById('mem-bar').style.width = d.mem_percent + '%';
+                document.getElementById('mem-used').textContent = d.mem_used;
+                document.getElementById('mem-total').textContent = d.mem_total;
+                document.getElementById('disk-percent').textContent = d.disk_percent.toFixed(0) + '%';
+                document.getElementById('disk-bar').style.width = d.disk_percent + '%';
+                document.getElementById('disk-used').textContent = d.disk_used;
+                document.getElementById('disk-total').textContent = d.disk_total;
+                document.getElementById('uptime').textContent = d.uptime;
+                document.getElementById('hostname').textContent = d.hostname;
+            } catch (e) {}
+        }
+
+        async function loadProcesses() {
+            try {
+                const data = await (await fetch('/api/processes')).json();
+                document.getElementById('process-list').innerHTML = data
+                    .sort((a, b) => b.cpu - a.cpu).slice(0, 40)
+                    .map(p => `
+                        <div class="process-item">
+                            <div class="process-info">
+                                <div class="process-name">${p.name}</div>
+                                <div class="process-meta">
+                                    <span>#${p.pid}</span>
+                                    <span>CPU ${p.cpu.toFixed(1)}%</span>
+                                    <span>MEM ${p.memory.toFixed(1)}%</span>
+                                </div>
+                            </div>
+                            <button class="btn-kill" onclick="killProc(${p.pid},'${p.name}')"><i class="bi bi-x"></i></button>
+                        </div>
+                    `).join('');
+            } catch (e) {}
+        }
+
+        async function loadPorts() {
+            try {
+                const data = await (await fetch('/api/ports')).json();
+                document.getElementById('ports-list').innerHTML = data.map(p => `
+                    <div class="port-item">
+                        <div class="port-left">
+                            <span class="badge badge-${p.protocol.toLowerCase()}">${p.protocol}</span>
+                            <span class="port-num">${p.port}</span>
+                        </div>
+                        <span class="port-process">${p.process || 'PID:' + p.pid}</span>
+                    </div>
+                `).join('');
+            } catch (e) {}
+        }
+
+        async function loadNetwork() {
+            try {
+                const data = await (await fetch('/api/network')).json();
+                document.getElementById('network-list').innerHTML = data.map(n => `
+                    <div class="network-item">
+                        <div class="network-name">${n.interface}</div>
+                        <div class="network-stats">
+                            <span class="net-up">↑ ${formatBytes(n.bytes_sent)}</span>
+                            <span class="net-down">↓ ${formatBytes(n.bytes_recv)}</span>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {}
+        }
+
+        async function killProc(pid, name) {
+            if (!confirm('Kill ' + name + '?')) return;
+            const r = await (await fetch('/api/kill/' + pid, {method: 'POST'})).json();
+            alert(r.message);
+            loadProcesses();
+        }
+
+        function refreshAll() {
+            loadSystem();
+            loadProcesses();
+            loadPorts();
+            loadNetwork();
+            loadFiles();
+        }
+
+        document.getElementById('process-search').addEventListener('input', function(e) {
+            const f = e.target.value.toLowerCase();
+            document.querySelectorAll('.process-item').forEach(r => {
+                r.style.display = r.textContent.toLowerCase().includes(f) ? '' : 'none';
+            });
+        });
+
+        // File Manager Functions
+        let currentPath = '/root';
+
+        async function loadFiles() {
+            try {
+                const d = await (await fetch('/api/files?dir=' + encodeURIComponent(currentPath))).json();
+                if (d.status === 'error') {
+                    document.getElementById('files-list').innerHTML = '<div style="padding: 20px; text-align: center; color: #f85149;">' + d.message + '</div>';
+                    return;
+                }
+                document.getElementById('current-path').value = d.dir;
+                document.getElementById('files-list').innerHTML = d.files.map(f => {
+                    const icon = f.is_dir ? 'bi-folder-fill folder' : 'bi-file-earmark';
+                    return `
+                        <div class="file-item">
+                            <i class="bi ${icon} file-icon"></i>
+                            <div class="file-info">
+                                <div class="file-name">${f.name}</div>
+                                <div class="file-meta">${f.size_str} • ${f.mod_time}</div>
+                            </div>
+                            <div class="file-actions">
+                                ${f.is_dir ? 
+                                    `<button class="btn-action btn-sm" onclick="openDir('${f.path}')">Open</button>` : 
+                                    ''
+                                }
+                                <button class="btn-action btn-sm btn-delete" onclick="deleteFile('${f.path}', ${f.is_dir})">Delete</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                document.getElementById('files-list').innerHTML = '<div style="padding: 20px; text-align: center; color: #8b949e;">Failed to load files</div>';
+            }
+        }
+
+        function openDir(path) {
+            currentPath = path;
+            loadFiles();
+        }
+
+        function parentDir() {
+            if (currentPath === '/') return;
+            const parent = currentPath.split('/').slice(0, -1).join('/') || '/';
+            currentPath = parent;
+            loadFiles();
+        }
+
+        async function deleteFile(path, isDir) {
+            const type = isDir ? 'directory' : 'file';
+            if (!confirm('Are you sure you want to delete this ' + type + '?\n\n' + path)) return;
+            
+            try {
+                const r = await (await fetch('/api/files/delete/' + encodeURIComponent(path), {method: 'DELETE'})).json();
+                if (r.status === 'ok') {
+                    alert('Deleted successfully');
+                    loadFiles();
+                } else {
+                    alert('Error: ' + r.message);
+                }
+            } catch (e) {
+                alert('Failed to delete');
+            }
+        }
+
+        function refreshFiles() {
+            loadFiles();
+        }
+
+        refreshAll();
+        setInterval(loadSystem, 3000);
+        setInterval(loadProcesses, 8000);
+    </script>
+</body>
+</html>
