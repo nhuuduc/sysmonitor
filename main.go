@@ -517,6 +517,66 @@ func main() {
 		http.ServeFile(w, r, path)
 	}))
 	
+	// Copy file
+	r.HandleFunc("/api/files/copy", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Source string `json:"source"`
+			Dest   string `json:"dest"`
+		}
+		json.NewDecoder(r.Body).Decode(&req)
+		
+		w.Header().Set("Content-Type", "application/json")
+		
+		if req.Source == "" || req.Dest == "" {
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Source and dest required"})
+			return
+		}
+		
+		// Read source file
+		data, err := os.ReadFile(req.Source)
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": err.Error()})
+			return
+		}
+		
+		// Get source file permissions
+		info, _ := os.Stat(req.Source)
+		perm := info.Mode().Perm()
+		
+		// Write to dest
+		err = os.WriteFile(req.Dest, data, perm)
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": err.Error()})
+			return
+		}
+		
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": "File copied"})
+	})).Methods("POST")
+	
+	// Move file
+	r.HandleFunc("/api/files/move", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Source string `json:"source"`
+			Dest   string `json:"dest"`
+		}
+		json.NewDecoder(r.Body).Decode(&req)
+		
+		w.Header().Set("Content-Type", "application/json")
+		
+		if req.Source == "" || req.Dest == "" {
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Source and dest required"})
+			return
+		}
+		
+		err := os.Rename(req.Source, req.Dest)
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": err.Error()})
+			return
+		}
+		
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": "File moved"})
+	})).Methods("POST")
+	
 	// Terminal page and WebSocket
 	r.HandleFunc("/terminal", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "templates/terminal.html")

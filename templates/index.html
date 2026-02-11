@@ -351,6 +351,14 @@
             background: #30363d;
             border-color: #58a6ff;
         }
+        .bookmark-remove {
+            margin-left: 6px;
+            color: #f85149;
+            font-weight: bold;
+        }
+        .bookmark-remove:hover {
+            color: #ff7b72;
+        }
         
         .file-toolbar {
             display: flex;
@@ -831,6 +839,7 @@
                 <input type="text" class="search-box" id="current-path" value="/root" placeholder="Enter path..." onkeypress="handlePathInput(event)">
                 <button class="btn-action" onclick="parentDir()"><i class="bi bi-arrow-up"></i></button>
                 <button class="btn-action" onclick="refreshFiles()"><i class="bi bi-arrow-clockwise"></i></button>
+                <button class="btn-action" onclick="pasteFile()" id="pasteBtn" style="display:none;" title="Paste file here"><i class="bi bi-clipboard"></i> Paste</button>
             </div>
             <div class="list-card" id="files-list"></div>
         </div>
@@ -1022,6 +1031,7 @@
                                     `<button class="btn-action btn-sm" onclick="openDir('${f.path}')">Open</button>` : 
                                     `<button class="btn-action btn-sm" onclick="downloadFile('${f.path}')" style="background: #238636;">⬇️</button>`
                                 }
+                                <button class="btn-action btn-sm" onclick="copyToClipboard('${f.path}')" title="Copy path">📋</button>
                                 ${isEditable ? 
                                     `<button class="btn-action btn-sm" onclick="editFile('${f.path}')" style="background: #58a6ff;">✏️</button>` : 
                                     ''
@@ -1079,8 +1089,11 @@
                 <button class="bookmark-btn" onclick="goToPath('/var/log')">logs</button>
                 <button class="bookmark-btn" onclick="goToPath('/opt')">opt</button>
             `;
-            const customBtns = bookmarks.map(b => 
-                `<button class="bookmark-btn" onclick="goToPath('${b.path}')" ondblclick="removeBookmark('${b.path}')" title="Double-click to remove">${b.name}</button>`
+            const customBtns = bookmarks.map((b, i) => 
+                `<button class="bookmark-btn" onclick="goToPath('${b.path}')">
+                    ${b.name}
+                    <span class="bookmark-remove" onclick="event.stopPropagation(); removeBookmark(${i})">×</span>
+                </button>`
             ).join('');
             container.innerHTML = defaultBtns + customBtns + 
                 `<button class="bookmark-btn" onclick="addBookmark()" title="Add current path">+</button>`;
@@ -1095,16 +1108,67 @@
             }
         }
 
-        function removeBookmark(path) {
-            if (confirm('Remove this bookmark?')) {
-                bookmarks = bookmarks.filter(b => b.path !== path);
-                localStorage.setItem('fileBookmarks', JSON.stringify(bookmarks));
-                loadBookmarks();
-            }
+        function removeBookmark(index) {
+            bookmarks.splice(index, 1);
+            localStorage.setItem('fileBookmarks', JSON.stringify(bookmarks));
+            loadBookmarks();
         }
 
         // Load bookmarks on init
         loadBookmarks();
+
+        // Clipboard for copy/paste files
+        let clipboardFile = null;
+        let clipboardMode = null; // 'copy' or 'cut'
+
+        function copyToClipboard(path) {
+            clipboardFile = path;
+            clipboardMode = 'copy';
+            document.getElementById('pasteBtn').style.display = 'inline-flex';
+            alert('Copied: ' + path + '\n\nGo to destination folder and click Paste');
+        }
+
+        function cutFile(path) {
+            clipboardFile = path;
+            clipboardMode = 'cut';
+            document.getElementById('pasteBtn').style.display = 'inline-flex';
+            alert('Cut: ' + path + '\n\nGo to destination folder and click Paste');
+        }
+
+        async function pasteFile() {
+            if (!clipboardFile) return;
+            
+            const filename = clipboardFile.split('/').pop();
+            const dest = currentPath + '/' + filename;
+            
+            if (clipboardFile === dest) {
+                alert('Source and destination are the same');
+                return;
+            }
+            
+            const action = clipboardMode === 'cut' ? 'move' : 'copy';
+            
+            try {
+                const r = await fetch('/api/files/' + action, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ source: clipboardFile, dest: dest })
+                });
+                const data = await r.json();
+                
+                if (data.status === 'ok') {
+                    alert((clipboardMode === 'cut' ? 'Moved' : 'Copied') + ' successfully!');
+                    clipboardFile = null;
+                    clipboardMode = null;
+                    document.getElementById('pasteBtn').style.display = 'none';
+                    loadFiles();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
 
         async function deleteFile(path, isDir) {
             const type = isDir ? 'directory' : 'file';
