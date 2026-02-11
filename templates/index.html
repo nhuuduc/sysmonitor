@@ -326,6 +326,32 @@
         .tab-pane.active { display: block; }
         
         /* File Manager */
+        .bookmarks {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .bookmark-label {
+            font-size: 14px;
+            color: #8b949e;
+        }
+        .bookmark-btn {
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 6px 12px;
+            color: #58a6ff;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .bookmark-btn:hover {
+            background: #30363d;
+            border-color: #58a6ff;
+        }
+        
         .file-toolbar {
             display: flex;
             gap: 10px;
@@ -792,10 +818,19 @@
         
         <div class="tab-pane" id="files">
             <div class="section-title">File Manager</div>
+            <!-- Bookmarks -->
+            <div class="bookmarks" id="bookmarks">
+                <span class="bookmark-label">📌</span>
+                <button class="bookmark-btn" onclick="goToPath('/root')">~</button>
+                <button class="bookmark-btn" onclick="goToPath('/etc')">etc</button>
+                <button class="bookmark-btn" onclick="goToPath('/var/log')">logs</button>
+                <button class="bookmark-btn" onclick="goToPath('/opt')">opt</button>
+                <button class="bookmark-btn" onclick="addBookmark()" title="Add current path">+</button>
+            </div>
             <div class="file-toolbar">
                 <input type="text" class="search-box" id="current-path" value="/root" placeholder="Enter path..." onkeypress="handlePathInput(event)">
-                <button class="btn-action" onclick="parentDir()"><i class="bi bi-arrow-up"></i> Up</button>
-                <button class="btn-action" onclick="refreshFiles()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+                <button class="btn-action" onclick="parentDir()"><i class="bi bi-arrow-up"></i></button>
+                <button class="btn-action" onclick="refreshFiles()"><i class="bi bi-arrow-clockwise"></i></button>
             </div>
             <div class="list-card" id="files-list"></div>
         </div>
@@ -985,13 +1020,13 @@
                             <div class="file-actions">
                                 ${f.is_dir ? 
                                     `<button class="btn-action btn-sm" onclick="openDir('${f.path}')">Open</button>` : 
-                                    ''
+                                    `<button class="btn-action btn-sm" onclick="downloadFile('${f.path}')" style="background: #238636;">⬇️</button>`
                                 }
                                 ${isEditable ? 
-                                    `<button class="btn-action btn-sm" onclick="editFile('${f.path}')" style="background: #58a6ff;">✏️ Edit</button>` : 
+                                    `<button class="btn-action btn-sm" onclick="editFile('${f.path}')" style="background: #58a6ff;">✏️</button>` : 
                                     ''
                                 }
-                                <button class="btn-action btn-sm btn-delete" onclick="deleteFile('${f.path}', ${f.is_dir})">Delete</button>
+                                <button class="btn-action btn-sm btn-delete" onclick="deleteFile('${f.path}', ${f.is_dir})">🗑️</button>
                             </div>
                         </div>
                     `;
@@ -1022,6 +1057,54 @@
             currentPath = parent;
             loadFiles();
         }
+
+        function downloadFile(path) {
+            window.open('/api/files/download?path=' + encodeURIComponent(path), '_blank');
+        }
+
+        function goToPath(path) {
+            currentPath = path;
+            loadFiles();
+        }
+
+        // Bookmarks management
+        let bookmarks = JSON.parse(localStorage.getItem('fileBookmarks') || '[]');
+        
+        function loadBookmarks() {
+            const container = document.getElementById('bookmarks');
+            const defaultBtns = `
+                <span class="bookmark-label">📌</span>
+                <button class="bookmark-btn" onclick="goToPath('/root')">~</button>
+                <button class="bookmark-btn" onclick="goToPath('/etc')">etc</button>
+                <button class="bookmark-btn" onclick="goToPath('/var/log')">logs</button>
+                <button class="bookmark-btn" onclick="goToPath('/opt')">opt</button>
+            `;
+            const customBtns = bookmarks.map(b => 
+                `<button class="bookmark-btn" onclick="goToPath('${b.path}')" ondblclick="removeBookmark('${b.path}')" title="Double-click to remove">${b.name}</button>`
+            ).join('');
+            container.innerHTML = defaultBtns + customBtns + 
+                `<button class="bookmark-btn" onclick="addBookmark()" title="Add current path">+</button>`;
+        }
+
+        function addBookmark() {
+            const name = prompt('Bookmark name:', currentPath.split('/').pop() || 'root');
+            if (name) {
+                bookmarks.push({ name, path: currentPath });
+                localStorage.setItem('fileBookmarks', JSON.stringify(bookmarks));
+                loadBookmarks();
+            }
+        }
+
+        function removeBookmark(path) {
+            if (confirm('Remove this bookmark?')) {
+                bookmarks = bookmarks.filter(b => b.path !== path);
+                localStorage.setItem('fileBookmarks', JSON.stringify(bookmarks));
+                loadBookmarks();
+            }
+        }
+
+        // Load bookmarks on init
+        loadBookmarks();
 
         async function deleteFile(path, isDir) {
             const type = isDir ? 'directory' : 'file';

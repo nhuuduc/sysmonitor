@@ -493,6 +493,30 @@ func main() {
 		http.ServeFile(w, r, "templates/editor.html")
 	}))
 	
+	// Download file
+	r.HandleFunc("/api/files/download", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Query().Get("path")
+		if path == "" {
+			http.Error(w, "Path required", http.StatusBadRequest)
+			return
+		}
+		
+		info, err := os.Stat(path)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		
+		if info.IsDir() {
+			http.Error(w, "Cannot download directory", http.StatusBadRequest)
+			return
+		}
+		
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filepath.Base(path)))
+		w.Header().Set("Content-Type", "application/octet-stream")
+		http.ServeFile(w, r, path)
+	}))
+	
 	// Terminal page and WebSocket
 	r.HandleFunc("/terminal", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "templates/terminal.html")
