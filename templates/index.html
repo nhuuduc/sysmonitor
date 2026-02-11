@@ -446,6 +446,7 @@
             align-items: center;
             gap: 12px;
             border-bottom: 1px solid #30363d;
+            flex-wrap: wrap;
         }
         .modal-title {
             flex: 1;
@@ -481,6 +482,32 @@
         }
         .modal-status.success { color: #3fb950; }
         .modal-status.error { color: #f85149; }
+        
+        /* Font size controls */
+        .font-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #30363d;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+        .font-btn {
+            background: #21262d;
+            border: none;
+            color: #c9d1d9;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .font-btn:hover { background: #484f58; }
+        .font-size-label {
+            color: #8b949e;
+            font-size: 12px;
+            min-width: 35px;
+            text-align: center;
+        }
         
         /* CodeMirror trong modal */
         .CodeMirror {
@@ -776,6 +803,22 @@
         let currentEditPath = '';
         let originalEditContent = '';
         let isEditModified = false;
+        let currentFontSize = 14;
+
+        function changeFontSize(delta) {
+            currentFontSize = Math.max(10, Math.min(24, currentFontSize + delta));
+            document.getElementById('fontSizeLabel').textContent = currentFontSize + 'px';
+            if (codeEditor) {
+                codeEditor.getWrapperElement().style.fontSize = currentFontSize + 'px';
+                codeEditor.refresh();
+            }
+            localStorage.setItem('editorFontSize', currentFontSize);
+        }
+
+        // Load saved font size
+        if (localStorage.getItem('editorFontSize')) {
+            currentFontSize = parseInt(localStorage.getItem('editorFontSize'));
+        }
 
         function openEditorModal(path) {
             currentEditPath = path;
@@ -822,6 +865,9 @@
         function initCodeEditor(content, filename) {
             const mode = getEditorMode(filename);
             
+            // Update font size label
+            document.getElementById('fontSizeLabel').textContent = currentFontSize + 'px';
+            
             codeEditor = CodeMirror(document.getElementById('modalEditor'), {
                 value: content,
                 mode: mode,
@@ -833,6 +879,10 @@
                 autoCloseBrackets: true,
                 matchBrackets: true
             });
+            
+            // Apply saved font size
+            codeEditor.getWrapperElement().style.fontSize = currentFontSize + 'px';
+            codeEditor.refresh();
 
             codeEditor.on('change', () => {
                 isEditModified = codeEditor.getValue() !== originalEditContent;
@@ -920,6 +970,11 @@
         <div class="modal-container">
             <div class="modal-header">
                 <span class="modal-title" id="modalTitle">editor</span>
+                <div class="font-controls">
+                    <button class="font-btn" onclick="changeFontSize(-1)">A-</button>
+                    <span class="font-size-label" id="fontSizeLabel">14px</span>
+                    <button class="font-btn" onclick="changeFontSize(1)">A+</button>
+                </div>
                 <button class="modal-close" onclick="closeEditorModal()">✕ Close</button>
             </div>
             <div class="modal-body" id="modalEditor"></div>
