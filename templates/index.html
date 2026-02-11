@@ -1182,6 +1182,7 @@
 
         function updateModalSaveButton() {
             const btn = document.getElementById('modalSaveBtn');
+            btn.disabled = false; // Enable button after file loaded
             if (isEditModified) {
                 btn.textContent = '💾 Save *';
                 btn.style.opacity = '1';
@@ -1192,7 +1193,7 @@
         }
 
         async function saveModalFile() {
-            if (!codeEditor || !isEditModified) return;
+            if (!codeEditor) return;
             
             const btn = document.getElementById('modalSaveBtn');
             btn.disabled = true;
