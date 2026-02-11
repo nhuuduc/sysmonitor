@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -19,6 +20,8 @@ import (
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/host"
 	"github.com/shirou/gopsutil/v3/mem"
+	"github.com/shirou/gopsutil/v3/net"
+	"github.com/shirou/gopsutil/v3/process"
 	"golang.org/x/oauth2"
 )
 
@@ -254,6 +257,78 @@ func formatSize(size int64) string {
 	return fmt.Sprintf("%.1f %cB", float64(size)/float64(div), "KMGTPE"[exp])
 }
 
+func getProcesses() []map[string]interface{} {
+	procs, _ := process.Processes()
+	var result []map[string]interface{}
+	for _, p := range procs {
+		name, _ := p.Name()
+		cpuPct, _ := p.CPUPercent()
+		memPct, _ := p.MemoryPercent()
+		status, _ := p.Status()
+		user, _ := p.Username()
+		cmdline, _ := p.Cmdline()
+		if len(cmdline) > 100 {
+			cmdline = cmdline[:100] + "..."
+		}
+		result = append(result, map[string]interface{}{
+			"pid":     p.Pid,
+			"name":    name,
+			"cpu":     cpuPct,
+			"memory":  memPct,
+			"status":  strings.Join(status, ","),
+			"user":    user,
+			"command": cmdline,
+		})
+	}
+	return result
+}
+
+func getPorts() []map[string]interface{} {
+	connections, _ := net.Connections("all")
+	var result []map[string]interface{}
+	for _, conn := range connections {
+		if conn.Status == "LISTEN" {
+			procName := ""
+			if conn.Pid > 0 {
+				p, err := process.NewProcess(conn.Pid)
+				if err == nil {
+					procName, _ = p.Name()
+				}
+			}
+			proto := "TCP"
+			if conn.Type == syscall.SOCK_DGRAM {
+				proto = "UDP"
+			}
+			result = append(result, map[string]interface{}{
+				"protocol": proto,
+				"local_ip": conn.Laddr.IP,
+				"port":     conn.Laddr.Port,
+				"pid":      conn.Pid,
+				"process":  procName,
+				"status":   conn.Status,
+			})
+		}
+	}
+	return result
+}
+
+func getNetworkStats() []map[string]interface{} {
+	interfaces, _ := net.IOCounters(true)
+	var result []map[string]interface{}
+	for _, iface := range interfaces {
+		if iface.BytesSent > 0 || iface.BytesRecv > 0 {
+			result = append(result, map[string]interface{}{
+				"interface":    iface.Name,
+				"bytes_sent":   iface.BytesSent,
+				"bytes_recv":   iface.BytesRecv,
+				"packets_sent": iface.PacketsSent,
+				"packets_recv": iface.PacketsRecv,
+			})
+		}
+	}
+	return result
+}
+
 func getFiles(dir string) ([]FileInfo, error) {
 	var files []FileInfo
 	entries, err := os.ReadDir(dir)
@@ -336,6 +411,22 @@ func main() {
 			json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": "Deleted successfully"})
 		}
 	})).Methods("DELETE")
+	
+	// Processes, Ports, Network APIs
+	r.HandleFunc("/api/processes", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(getProcesses())
+	}))
+	
+	r.HandleFunc("/api/ports", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(getPorts())
+	}))
+	
+	r.HandleFunc("/api/network", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(getNetworkStats())
+	}))
 	
 	port := ":8090"
 	fmt.Printf("🚀 SysMonitor with Auth0 running on http://localhost%s\n", port)
