@@ -9,7 +9,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -23,6 +25,7 @@ import (
 	"github.com/shirou/gopsutil/v3/net"
 	"github.com/shirou/gopsutil/v3/process"
 	"golang.org/x/oauth2"
+	"golang.org/x/time/rate"
 )
 
 type SystemInfo struct {
@@ -50,12 +53,15 @@ type FileInfo struct {
 
 var (
 	auth0Domain       = os.Getenv("AUTH0_DOMAIN")
-	auth0ClientID     = os.Getenv("AUTH0_CLIENT_ID")
+	auth0ClientID     = os.Getenv("AUTH0_CLIENTID")
 	auth0ClientSecret = os.Getenv("AUTH0_CLIENT_SECRET")
 	auth0CallbackURL  = os.Getenv("AUTH0_CALLBACK_URL")
 	
 	store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_SECRET")))
 	oauthConfig *oauth2.Config
+	
+	// Rate limiter: 100 requests per minute, burst of 10
+	rateLimiter = NewRateLimiter(rate.Every(time.Minute/100), 10)
 )
 
 func init() {
@@ -139,7 +145,7 @@ func callbackHandler(w http.ResponseWriter, r *http.Request) {
 	session.Values["authenticated"] = true
 	session.Values["user_email"] = userInfo.Email
 	session.Save(r, w)
-	log.Printf("User logged in: %s", userInfo.Email)
+	auditLog("AUTH_LOGIN", fmt.Sprintf("Email=%s", userInfo.Email), userInfo.Email)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
@@ -164,8 +170,10 @@ func getUserInfo(token string) (*UserInfo, error) {
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := store.Get(r, "auth-session")
+	user := getCurrentUser(r)
 	session.Values["authenticated"] = false
 	session.Save(r, w)
+	auditLog("AUTH_LOGOUT", fmt.Sprintf("Email=%s", user), user)
 	logoutURL := fmt.Sprintf("https://%s/v2/logout?client_id=%s&returnTo=%s",
 		auth0Domain, auth0ClientID, url.QueryEscape("https://ai.nhangiaz.com/login"))
 	http.Redirect(w, r, logoutURL, http.StatusTemporaryRedirect)
@@ -353,6 +361,172 @@ func getFiles(dir string) ([]FileInfo, error) {
 	return files, nil
 }
 
+// ========== NEW FEATURE: Network Connections ==========
+type NetworkConnection struct {
+	Protocol   string `json:"protocol"`
+	LocalAddr  string `json:"local_addr"`
+	LocalPort  uint32 `json:"local_port"`
+	RemoteAddr string `json:"remote_addr"`
+	RemotePort uint32 `json:"remote_port"`
+	Status     string `json:"status"`
+	PID        int32  `json:"pid"`
+	Process    string `json:"process"`
+}
+
+func getNetworkConnections() []NetworkConnection {
+	connections, _ := net.Connections("all")
+	var result []NetworkConnection
+	
+	for _, conn := range connections {
+		// Get process name
+		procName := ""
+		if conn.Pid > 0 {
+			p, err := process.NewProcess(conn.Pid)
+			if err == nil {
+				procName, _ = p.Name()
+			}
+		}
+		
+		// Determine protocol
+		proto := "TCP"
+		if conn.Type == syscall.SOCK_DGRAM {
+			proto = "UDP"
+		}
+		
+		result = append(result, NetworkConnection{
+			Protocol:   proto,
+			LocalAddr:  conn.Laddr.IP,
+			LocalPort:  conn.Laddr.Port,
+			RemoteAddr: conn.Raddr.IP,
+			RemotePort: conn.Raddr.Port,
+			Status:     conn.Status,
+			PID:        conn.Pid,
+			Process:    procName,
+		})
+	}
+	return result
+}
+
+// ========== NEW FEATURE: Systemd Service Management ==========
+type SystemdService struct {
+	Name        string `json:"name"`
+	LoadState   string `json:"load_state"`
+	ActiveState string `json:"active_state"`
+	SubState    string `json:"sub_state"`
+	Description string `json:"description"`
+}
+
+func getSystemdServices() ([]SystemdService, error) {
+	cmd := exec.Command("systemctl", "list-units", "--type=service", "--all", "--no-pager", "--no-legend")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+	
+	var services []SystemdService
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		
+		// Parse systemctl output
+		fields := strings.Fields(line)
+		if len(fields) >= 4 {
+			name := strings.TrimSuffix(fields[0], ".service")
+			name = strings.TrimPrefix(name, "●")
+			name = strings.TrimSpace(name)
+			
+			description := ""
+			if len(fields) > 4 {
+				description = strings.Join(fields[4:], " ")
+			}
+			
+			services = append(services, SystemdService{
+				Name:        name,
+				LoadState:   fields[1],
+				ActiveState: fields[2],
+				SubState:    fields[3],
+				Description: description,
+			})
+		}
+	}
+	return services, nil
+}
+
+func controlSystemdService(name string, action string) error {
+	validActions := map[string]bool{"start": true, "stop": true, "restart": true, "enable": true, "disable": true}
+	if !validActions[action] {
+		return fmt.Errorf("invalid action: %s", action)
+	}
+	
+	// Sanitize service name
+	name = strings.TrimSpace(name)
+	if name == "" || strings.Contains(name, " ") || strings.Contains(name, "/") {
+		return fmt.Errorf("invalid service name")
+	}
+	
+	cmd := exec.Command("systemctl", action, name)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s: %s", err.Error(), string(output))
+	}
+	return nil
+}
+
+// ========== NEW FEATURE: User Sessions ==========
+type UserSession struct {
+	User      string `json:"user"`
+	TTY       string `json:"tty"`
+	Host      string `json:"host"`
+	LoginTime string `json:"login_time"`
+	Idle      string `json:"idle"`
+	PID       string `json:"pid"`
+}
+
+func getUserSessions() ([]UserSession, error) {
+	cmd := exec.Command("who", "-u")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+	
+	var sessions []UserSession
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		
+		fields := strings.Fields(line)
+		if len(fields) >= 5 {
+			session := UserSession{
+				User:      fields[0],
+				TTY:       fields[1],
+				LoginTime: strings.Join(fields[2:4], " "),
+			}
+			
+			// Parse idle time and PID
+			if len(fields) >= 6 {
+				session.Idle = fields[4]
+				session.PID = fields[5]
+			}
+			
+			// Parse host if present
+			for _, f := range fields {
+				if strings.HasPrefix(f, "(") && strings.HasSuffix(f, ")") {
+					session.Host = strings.Trim(f, "()")
+				}
+			}
+			
+			sessions = append(sessions, session)
+		}
+	}
+	return sessions, nil
+}
+
 func main() {
 	r := mux.NewRouter()
 	
@@ -365,12 +539,12 @@ func main() {
 		http.ServeFile(w, r, "templates/index.html")
 	}))
 	
-	r.HandleFunc("/api/system", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/api/system", rateLimitMiddleware(rateLimiter, authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(getSystemInfo())
-	}))
+	})))
 	
-	r.HandleFunc("/api/files", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/api/files", rateLimitMiddleware(rateLimiter, authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		dir := r.URL.Query().Get("dir")
 		if dir == "" {
 			dir = "/"
@@ -385,9 +559,9 @@ func main() {
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]interface{}{"status": "ok", "dir": dir, "files": files})
-	}))
+	})))
 	
-	r.HandleFunc("/api/files/delete/{path:.*}", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/api/files/delete/{path:.*}", rateLimitMiddleware(rateLimiter, authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		path := vars["path"]
 		path, _ = url.QueryUnescape(path)
@@ -410,25 +584,69 @@ func main() {
 		} else {
 			json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": "Deleted successfully"})
 		}
-	})).Methods("DELETE")
+	}))).Methods("DELETE")
 	
 	// Processes, Ports, Network APIs
-	r.HandleFunc("/api/processes", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/api/processes", rateLimitMiddleware(rateLimiter, authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(getProcesses())
-	}))
+	})))
 	
-	r.HandleFunc("/api/ports", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/api/ports", rateLimitMiddleware(rateLimiter, authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(getPorts())
-	}))
+	})))
 	
-	r.HandleFunc("/api/network", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/api/network", rateLimitMiddleware(rateLimiter, authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(getNetworkStats())
-	}))
+	})))
 	
-	r.HandleFunc("/api/files/save", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	// NEW: Network connections endpoint
+	r.HandleFunc("/api/connections", rateLimitMiddleware(rateLimiter, authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(getNetworkConnections())
+	})))
+	
+	// NEW: Systemd services endpoints
+	r.HandleFunc("/api/services", rateLimitMiddleware(rateLimiter, authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		services, err := getSystemdServices()
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{"status": "error", "message": err.Error()})
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": "ok", "services": services})
+	})))
+	
+	r.HandleFunc("/api/services/{name}/{action}", rateLimitMiddleware(rateLimiter, authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		vars := mux.Vars(r)
+		name := vars["name"]
+		action := vars["action"]
+		
+		err := controlSystemdService(name, action)
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": err.Error()})
+			return
+		}
+		
+		auditLog("SERVICE_CONTROL", fmt.Sprintf("Service=%s, Action=%s", name, action), getCurrentUser(r))
+		json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": fmt.Sprintf("Service %s: %s successful", name, action)})
+	}))).Methods("POST")
+	
+	// NEW: User sessions endpoint
+	r.HandleFunc("/api/sessions", rateLimitMiddleware(rateLimiter, authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		sessions, err := getUserSessions()
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{"status": "error", "message": err.Error()})
+			return
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": "ok", "sessions": sessions})
+	})))
+	
+	r.HandleFunc("/api/files/save", rateLimitMiddleware(rateLimiter, authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Path    string `json:"path"`
 			Content string `json:"content"`
@@ -449,12 +667,13 @@ func main() {
 		if err != nil {
 			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": err.Error()})
 		} else {
+			auditLog("FILE_SAVE", fmt.Sprintf("Path=%s", req.Path), getCurrentUser(r))
 			json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": "Saved successfully"})
 		}
-	})).Methods("POST")
+	}))).Methods("POST")
 	
 	// File read API
-	r.HandleFunc("/api/files/read", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/api/files/read", rateLimitMiddleware(rateLimiter, authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Query().Get("path")
 		if path == "" {
 			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Path required"})
@@ -486,7 +705,7 @@ func main() {
 				"content": string(content),
 			})
 		}
-	}))
+	})))
 	
 	// Editor page
 	r.HandleFunc("/editor", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
@@ -494,7 +713,7 @@ func main() {
 	}))
 	
 	// Download file
-	r.HandleFunc("/api/files/download", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/api/files/download", rateLimitMiddleware(rateLimiter, authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Query().Get("path")
 		if path == "" {
 			http.Error(w, "Path required", http.StatusBadRequest)
@@ -512,13 +731,14 @@ func main() {
 			return
 		}
 		
+		auditLog("FILE_DOWNLOAD", fmt.Sprintf("Path=%s", path), getCurrentUser(r))
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filepath.Base(path)))
 		w.Header().Set("Content-Type", "application/octet-stream")
 		http.ServeFile(w, r, path)
-	}))
+	})))
 	
 	// Copy file
-	r.HandleFunc("/api/files/copy", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/api/files/copy", rateLimitMiddleware(rateLimiter, authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Source string `json:"source"`
 			Dest   string `json:"dest"`
@@ -550,11 +770,12 @@ func main() {
 			return
 		}
 		
+		auditLog("FILE_COPY", fmt.Sprintf("Source=%s, Dest=%s", req.Source, req.Dest), getCurrentUser(r))
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": "File copied"})
-	})).Methods("POST")
+	}))).Methods("POST")
 	
 	// Move file
-	r.HandleFunc("/api/files/move", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/api/files/move", rateLimitMiddleware(rateLimiter, authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Source string `json:"source"`
 			Dest   string `json:"dest"`
@@ -575,13 +796,109 @@ func main() {
 		}
 		
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": "File moved"})
-	})).Methods("POST")
+	}))).Methods("POST")
+	
+	// Kill process endpoint - improved with better error handling and verification
+	r.HandleFunc("/api/kill/{pid}", rateLimitMiddleware(rateLimiter, authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		vars := mux.Vars(r)
+		pidStr := vars["pid"]
+		pid, err := strconv.Atoi(pidStr)
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Invalid PID"})
+			return
+		}
+		
+		// Prevent killing critical system processes
+		if pid <= 1 {
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Cannot kill init/system process"})
+			return
+		}
+		
+		proc, err := process.NewProcess(int32(pid))
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Process not found"})
+			return
+		}
+		
+		name, _ := proc.Name()
+		
+		// Check if process is already zombie
+		status, _ := proc.Status()
+		if len(status) > 0 && status[0] == "Z" {
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Process is already a zombie (waiting for parent)"})
+			return
+		}
+		
+		// Try SIGTERM first (graceful)
+		err = syscall.Kill(pid, syscall.SIGTERM)
+		if err != nil {
+			// If SIGTERM fails, try SIGKILL directly
+			err = syscall.Kill(pid, syscall.SIGKILL)
+			if err != nil {
+				json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": fmt.Sprintf("Failed to kill: %v", err)})
+				return
+			}
+		}
+		
+		// Wait briefly and verify process is dead or zombie
+		time.Sleep(100 * time.Millisecond)
+		
+		// Check if process still exists
+		if _, err := os.Stat(fmt.Sprintf("/proc/%d", pid)); err != nil {
+			// Process is completely gone
+			auditLog("PROCESS_KILL", fmt.Sprintf("PID=%d, Name=%s", pid, name), getCurrentUser(r))
+			json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": fmt.Sprintf("Process %s (PID: %d) killed successfully", name, pid)})
+			return
+		}
+		
+		// Process might still exist - check if it's zombie
+		newProc, err := process.NewProcess(int32(pid))
+		if err == nil {
+			newStatus, _ := newProc.Status()
+			if len(newStatus) > 0 && newStatus[0] == "Z" {
+				// Process is now zombie - that's success
+				auditLog("PROCESS_KILL", fmt.Sprintf("PID=%d, Name=%s (zombie)", pid, name), getCurrentUser(r))
+				json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": fmt.Sprintf("Process %s (PID: %d) killed (zombie, waiting for parent to reap)", name, pid)})
+				return
+			}
+		}
+		
+		// Process still running, escalate to SIGKILL
+		err = syscall.Kill(pid, syscall.SIGKILL)
+		if err != nil {
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": fmt.Sprintf("SIGKILL failed: %v", err)})
+			return
+		}
+		
+		time.Sleep(100 * time.Millisecond)
+		
+		// Final verification
+		if _, err := os.Stat(fmt.Sprintf("/proc/%d", pid)); err != nil {
+			auditLog("PROCESS_KILL", fmt.Sprintf("PID=%d, Name=%s (SIGKILL)", pid, name), getCurrentUser(r))
+			json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": fmt.Sprintf("Process %s (PID: %d) killed with SIGKILL", name, pid)})
+			return
+		}
+		
+		// Check zombie status one more time
+		finalProc, _ := process.NewProcess(int32(pid))
+		if finalProc != nil {
+			finalStatus, _ := finalProc.Status()
+			if len(finalStatus) > 0 && finalStatus[0] == "Z" {
+				auditLog("PROCESS_KILL", fmt.Sprintf("PID=%d, Name=%s (zombie)", pid, name), getCurrentUser(r))
+				json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": fmt.Sprintf("Process %s (PID: %d) killed (zombie)", name, pid)})
+				return
+			}
+		}
+		
+		json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": "Process may not have been killed - check manually"})
+	}))).Methods("POST")
 	
 	// Terminal page and WebSocket
 	r.HandleFunc("/terminal", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "templates/terminal.html")
 	}))
-	r.HandleFunc("/ws/terminal", authMiddleware(terminalHandler))
+	r.HandleFunc("/ws/terminal", rateLimitMiddleware(rateLimiter, authMiddleware(terminalHandler)))
 	
 	port := ":8090"
 	fmt.Printf("🚀 SysMonitor with Auth0 running on http://localhost%s\n", port)

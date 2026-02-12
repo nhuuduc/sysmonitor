@@ -94,6 +94,16 @@
             to { opacity: 1; transform: scale(1) translateY(0); }
         }
         
+        @keyframes toastSlideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes toastSlideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        
         .animate-fadeIn { animation: fadeIn 0.3s ease forwards; }
         .animate-slideIn { animation: slideInRight 0.3s ease forwards; }
         .animate-pulse { animation: pulse 2s ease-in-out infinite; }
@@ -435,6 +445,12 @@
         
         .badge-tcp { background: var(--accent-green); color: #fff; }
         .badge-udp { background: var(--accent-orange); color: #fff; }
+        .badge-green { background: var(--accent-green); color: #fff; }
+        .badge-blue { background: var(--accent-blue); color: #fff; }
+        .badge-red { background: var(--accent-red); color: #fff; }
+        .badge-gray { background: var(--text-muted); color: #fff; }
+        
+        .btn-sm { padding: 4px 8px !important; font-size: 12px !important; min-width: auto !important; }
         
         .port-num {
             font-weight: 700;
@@ -688,6 +704,14 @@
         }
         
         .file-item:last-child { border-bottom: none; }
+        .file-item.example-file {
+            background: linear-gradient(90deg, rgba(88, 166, 255, 0.1) 0%, transparent 100%);
+            border-left: 3px solid #58a6ff;
+        }
+        .file-item.example-file .file-name {
+            color: #58a6ff;
+            font-weight: 500;
+        }
         
         .file-icon {
             width: 22px;
@@ -1039,6 +1063,240 @@
         ::-webkit-scrollbar-track { background: var(--bg-primary); }
         ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+        
+        /* ========== TOAST NOTIFICATIONS ========== */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+        
+        .toast {
+            min-width: 300px;
+            max-width: 500px;
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            animation: toastSlideIn 0.3s ease-out;
+            font-size: 14px;
+            pointer-events: auto;
+            backdrop-filter: blur(10px);
+        }
+        
+        .toast.success { 
+            background: rgba(16, 185, 129, 0.95); 
+            color: white; 
+            border-left: 4px solid #059669;
+        }
+        
+        .toast.error { 
+            background: rgba(239, 68, 68, 0.95); 
+            color: white; 
+            border-left: 4px solid #dc2626;
+        }
+        
+        .toast.info { 
+            background: rgba(59, 130, 246, 0.95); 
+            color: white; 
+            border-left: 4px solid #2563eb;
+        }
+        
+        .toast.warning { 
+            background: rgba(245, 158, 11, 0.95); 
+            color: white; 
+            border-left: 4px solid #d97706;
+        }
+        
+        .toast-content {
+            flex: 1;
+            word-break: break-word;
+        }
+        
+        .toast-close {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+            margin-left: 12px;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.8;
+            transition: opacity 0.15s ease;
+        }
+        
+        .toast-close:hover {
+            opacity: 1;
+        }
+        
+        @media (max-width: 480px) {
+            .toast-container {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+            }
+            
+            .toast {
+                min-width: auto;
+                width: 100%;
+            }
+        }
+        
+        /* ========== DRAG-DROP ZONE ========== */
+        .drop-zone {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(88, 166, 255, 0.95);
+            border: 4px dashed var(--accent-blue);
+            border-radius: 12px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .drop-zone.active {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .drop-zone.dragging {
+            background: rgba(16, 185, 129, 0.95);
+            border-color: #10b981;
+        }
+        
+        .drop-zone-content {
+            text-align: center;
+            color: white;
+            pointer-events: none;
+        }
+        
+        .drop-zone-content h3 {
+            margin: 15px 0 10px 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        
+        .drop-zone-content .text-muted {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .drop-zone-icon {
+            width: 64px !important;
+            height: 64px !important;
+            animation: bounce 1s infinite;
+        }
+        
+        .drop-zone-progress {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            display: none;
+            text-align: center;
+            min-width: 300px;
+        }
+        
+        .drop-zone-progress.active {
+            display: block;
+        }
+        
+        .drop-zone-progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        .drop-zone-progress-fill {
+            height: 100%;
+            background: #10b981;
+            transition: width 0.3s ease;
+        }
+        
+        .drop-zone-file-list {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 300px;
+            display: none;
+        }
+        
+        .drop-zone-file-list.active {
+            display: block;
+        }
+        
+        .drop-zone-file-list h5 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            text-transform: uppercase;
+            opacity: 0.7;
+        }
+        
+        .drop-zone-file-item {
+            display: flex;
+            align-items: center;
+            padding: 5px 0;
+            font-size: 13px;
+        }
+        
+        .drop-zone-file-item .icon {
+            margin-right: 8px;
+            opacity: 0.7;
+            width: 14px !important;
+            height: 14px !important;
+        }
+        
+        .drop-zone-file-item.success .icon {
+            color: #10b981;
+        }
+        
+        .drop-zone-file-item.error .icon {
+            color: #ef4444;
+        }
+        
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+        
+        /* Make file manager card relative for drop zone positioning */
+        #files .list-card {
+            position: relative;
+            min-height: 300px;
+        }
     </style>
 </head>
 <body>
@@ -1100,6 +1358,31 @@
             <a href="#" class="nav-item" data-tab="files" onclick="switchTab('files')">
                 <svg class="icon" viewBox="0 0 16 16"><path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.991-1.819l-.637-7a1.99 1.99 0 0 1 .342-1.31zM2.19 4a1 1 0 0 0-.996 1.09l.637 7a1 1 0 0 0 .995.91h10.348a1 1 0 0 0 .995-.91l.637-7A1 1 0 0 0 13.81 4H2.19zm4.69-1.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981l.006.139C1.72 3.042 1.95 3 2.19 3h5.4l-.5-.707z"/></svg>
                 Files
+            </a>
+            <a href="#" class="nav-item" data-tab="connections" onclick="switchTab('connections')">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="5" r="3"/>
+                    <circle cx="5" cy="19" r="3"/>
+                    <circle cx="19" cy="19" r="3"/>
+                    <path d="M12 8v4M8.5 16.5l2-2.5M15.5 16.5l-2-2.5"/>
+                </svg>
+                Connections
+            </a>
+            <a href="#" class="nav-item" data-tab="services" onclick="switchTab('services')">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+                Services
+            </a>
+            <a href="#" class="nav-item" data-tab="sessions" onclick="switchTab('sessions')">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                Sessions
             </a>
             <a href="/terminal" target="_blank" class="nav-item" style="margin-top: auto; border-top: 1px solid var(--border-color);">
                 <svg class="icon" viewBox="0 0 16 16"><path d="M6 9a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3A.5.5 0 0 1 6 9zM3.854 4.146a.5.5 0 0 1 0 .708L2.707 6l1.147 1.146a.5.5 0 1 1-.708.708l-1.5-1.5a.5.5 0 0 1 0-.708l1.5-1.5a.5.5 0 0 1 .708 0zm0 4a.5.5 0 0 1 0 .708L2.707 10l1.147 1.146a.5.5 0 0 1-.708.708l-1.5-1.5a.5.5 0 0 1 0-.708l1.5-1.5a.5.5 0 0 1 .708 0z"/><path d="M0 1.5A.5.5 0 0 1 .5 1h15a.5.5 0 0 1 .5.5v11a.5.5 0 0 1-.5.5H3.707l2.147 2.146a.5.5 0 0 1-.708.708l-2.5-2.5A.5.5 0 0 1 2.5 12.5v-11a.5.5 0 0 1 .5-.5h12z"/></svg>
@@ -1221,13 +1504,90 @@
                         <button class="btn-action" onclick="refreshFiles()" title="Refresh">
                             <svg class="icon" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
                         </button>
+                        <button class="btn-action" onclick="document.getElementById('fileUploadInput').click()" title="Upload file" style="background: #238636;">
+                            <svg class="icon" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/></svg>
+                            Upload
+                        </button>
+                        <input type="file" id="fileUploadInput" style="display:none" onchange="uploadFile(this)">
                         <button class="btn-action" onclick="pasteFile()" id="pasteBtn" style="display:none;" title="Paste file here">
                             <svg class="icon" viewBox="0 0 16 16"><path d="M4 1.5a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h2zm6 0a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h2zm-3 0a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h2zM4 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H4zm0 1h8a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>
                             Paste
                         </button>
                     </div>
                     
+                    <!-- Drag-Drop Zone -->
+                    <div id="drop-zone" class="drop-zone">
+                        <div class="drop-zone-content">
+                            <svg class="icon drop-zone-icon" viewBox="0 0 16 16">
+                                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                                <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                            </svg>
+                            <h3>Drop files here to upload</h3>
+                            <p class="text-muted">or click to browse</p>
+                        </div>
+                        <input type="file" id="drop-zone-file-input" multiple style="display: none;">
+                    </div>
+                    
                     <div class="list-card" id="files-list"></div>
+                </div>
+                
+                <!-- Connections Tab -->
+                <div class="tab-pane" id="connections">
+                    <div class="section-title">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="5" r="3"/>
+                            <circle cx="5" cy="19" r="3"/>
+                            <circle cx="19" cy="19" r="3"/>
+                            <path d="M12 8v4M8.5 16.5l2-2.5M15.5 16.5l-2-2.5"/>
+                        </svg>
+                        Network Connections
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                        <input type="text" class="search-box" id="conn-search" placeholder="Filter by IP, port or process..." style="flex: 1;">
+                        <select id="conn-status-filter" onchange="loadConnections()" style="padding: 8px 12px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-size: 13px;">
+                            <option value="">All Status</option>
+                            <option value="ESTABLISHED">ESTABLISHED</option>
+                            <option value="LISTEN">LISTEN</option>
+                            <option value="TIME_WAIT">TIME_WAIT</option>
+                            <option value="CLOSE_WAIT">CLOSE_WAIT</option>
+                        </select>
+                    </div>
+                    <div class="list-card" id="connections-list"></div>
+                </div>
+                
+                <!-- Services Tab -->
+                <div class="tab-pane" id="services">
+                    <div class="section-title">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4"/>
+                        </svg>
+                        Systemd Services
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                        <input type="text" class="search-box" id="service-search" placeholder="Search services..." style="flex: 1;">
+                        <select id="service-state-filter" onchange="loadServices()" style="padding: 8px 12px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-size: 13px;">
+                            <option value="">All States</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="failed">Failed</option>
+                        </select>
+                    </div>
+                    <div class="list-card" id="services-list"></div>
+                </div>
+                
+                <!-- Sessions Tab -->
+                <div class="tab-pane" id="sessions">
+                    <div class="section-title">
+                        <svg class="icon icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                        Active User Sessions
+                    </div>
+                    <div class="list-card" id="sessions-list"></div>
                 </div>
             </div>
 
@@ -1267,6 +1627,9 @@
         </a>
     </nav>
 
+    <!-- ========== TOAST CONTAINER ========== -->
+    <div class="toast-container" id="toast-container"></div>
+
     <!-- ========== EDITOR MODAL ========== -->
     <div class="modal-overlay" id="editorModal">
         <div class="modal-container">
@@ -1295,6 +1658,311 @@
 
     <!-- ========== SCRIPTS ========== -->
     <script>
+        // ========== TOAST NOTIFICATIONS ==========
+        function showToast(message, type = 'info', duration = 4000) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span class="toast-content">${message}</span>
+                <button class="toast-close" onclick="closeToast(this.parentElement)">&times;</button>
+            `;
+            container.appendChild(toast);
+
+            // Auto-dismiss after duration
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.style.animation = 'toastSlideOut 0.3s ease-out forwards';
+                    setTimeout(() => toast.remove(), 300);
+                }
+            }, duration);
+        }
+
+        function closeToast(toast) {
+            if (toast && toast.parentElement) {
+                toast.style.animation = 'toastSlideOut 0.3s ease-out forwards';
+                setTimeout(() => toast.remove(), 300);
+            }
+        }
+
+        // Convenience functions
+        function showSuccessToast(message) { showToast(message, 'success'); }
+        function showErrorToast(message) { showToast(message, 'error'); }
+        function showInfoToast(message) { showToast(message, 'info'); }
+        function showWarningToast(message) { showToast(message, 'warning'); }
+        function showSuccess(message) { showToast(message, 'success'); }
+        function showError(message) { showToast(message, 'error'); }
+        function showInfo(message) { showToast(message, 'info'); }
+        function showWarning(message) { showToast(message, 'warning'); }
+
+        // ========== DRAG-DROP FILE UPLOAD ==========
+        const dropZone = document.getElementById('drop-zone');
+        const dropZoneFileInput = document.getElementById('drop-zone-file-input');
+        const filesTab = document.getElementById('files');
+
+        // Get current directory from file manager
+        function getCurrentDirectory() {
+            const currentPathInput = document.getElementById('current-path');
+            return currentPathInput ? currentPathInput.value : '/root';
+        }
+
+        // Handle drag enter
+        filesTab.addEventListener('dragenter', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (e.dataTransfer.types.includes('Files')) {
+                dropZone.classList.add('active');
+            }
+        }, false);
+
+        // Handle drag over
+        dropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            dropZone.classList.add('dragging');
+        }, false);
+
+        // Handle drag leave
+        dropZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Only hide if leaving the drop zone itself
+            if (e.target === dropZone) {
+                dropZone.classList.remove('active', 'dragging');
+            }
+        }, false);
+
+        // Handle drop
+        dropZone.addEventListener('drop', async function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            dropZone.classList.remove('active', 'dragging');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                await uploadFiles(files);
+            }
+        }, false);
+
+        // Handle click to browse
+        dropZone.addEventListener('click', function() {
+            dropZoneFileInput.click();
+        });
+
+        // Handle file input change
+        dropZoneFileInput.addEventListener('change', async function() {
+            const files = this.files;
+            if (files.length > 0) {
+                await uploadFiles(files);
+                // Clear input to allow same file selection again
+                this.value = '';
+            }
+        });
+
+        // Upload multiple files
+        async function uploadFiles(files) {
+            const currentDir = getCurrentDirectory();
+            const fileArray = Array.from(files);
+            
+            // Create progress indicator
+            showUploadProgress(fileArray);
+            
+            // Upload files sequentially
+            let successCount = 0;
+            let failCount = 0;
+            
+            for (let i = 0; i < fileArray.length; i++) {
+                const file = fileArray[i];
+                
+                try {
+                    await uploadSingleFile(file, currentDir, i, fileArray.length);
+                    successCount++;
+                    updateFileStatus(file.name, 'success');
+                } catch (error) {
+                    failCount++;
+                    updateFileStatus(file.name, 'error');
+                    console.error(`Failed to upload ${file.name}:`, error);
+                }
+                
+                // Update progress
+                const progress = ((i + 1) / fileArray.length) * 100;
+                updateUploadProgress(progress);
+            }
+            
+            // Hide progress after a delay
+            setTimeout(() => {
+                hideUploadProgress();
+            }, 2000);
+            
+            // Show summary toast
+            if (failCount === 0) {
+                showSuccessToast(`Successfully uploaded ${successCount} file${successCount > 1 ? 's' : ''}`);
+            } else if (successCount === 0) {
+                showErrorToast(`Failed to upload ${failCount} file${failCount > 1 ? 's' : ''}`);
+            } else {
+                showWarningToast(`Uploaded ${successCount} file${successCount > 1 ? 's' : ''}, ${failCount} failed`);
+            }
+            
+            // Refresh file list
+            loadFiles();
+        }
+
+        // Upload single file
+        async function uploadSingleFile(file, dir, index, total) {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('dir', dir);
+            
+            const response = await fetch('/api/files/upload', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.status !== 'ok') {
+                throw new Error(data.message || 'Upload failed');
+            }
+            
+            return data;
+        }
+
+        // Show upload progress
+        function showUploadProgress(files) {
+            const progressDiv = document.createElement('div');
+            progressDiv.className = 'drop-zone-progress active';
+            progressDiv.id = 'upload-progress';
+            progressDiv.innerHTML = `
+                <div id="upload-progress-text">Uploading ${files.length} file${files.length > 1 ? 's' : ''}...</div>
+                <div class="drop-zone-progress-bar">
+                    <div class="drop-zone-progress-fill" id="upload-progress-fill" style="width: 0%"></div>
+                </div>
+            `;
+            dropZone.appendChild(progressDiv);
+            
+            // Create file list
+            const fileList = document.createElement('div');
+            fileList.className = 'drop-zone-file-list active';
+            fileList.id = 'upload-file-list';
+            fileList.innerHTML = '<h5>Uploading Files</h5>';
+            
+            files.forEach(file => {
+                const item = document.createElement('div');
+                item.className = 'drop-zone-file-item';
+                item.id = `file-status-${file.name.replace(/[^a-z0-9]/gi, '-')}`;
+                item.innerHTML = `
+                    <svg class="icon animate-spin" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                    </svg>
+                    <span>${file.name} (${formatFileSize(file.size)})</span>
+                `;
+                fileList.appendChild(item);
+            });
+            
+            dropZone.appendChild(fileList);
+        }
+
+        // Update upload progress
+        function updateUploadProgress(percent) {
+            const fill = document.getElementById('upload-progress-fill');
+            const text = document.getElementById('upload-progress-text');
+            
+            if (fill) {
+                fill.style.width = `${percent}%`;
+            }
+            
+            if (text) {
+                text.textContent = `Uploading... ${Math.round(percent)}%`;
+            }
+        }
+
+        // Update file status
+        function updateFileStatus(fileName, status) {
+            const fileId = `file-status-${fileName.replace(/[^a-z0-9]/gi, '-')}`;
+            const item = document.getElementById(fileId);
+            
+            if (item) {
+                if (status === 'success') {
+                    item.innerHTML = `
+                        <svg class="icon" viewBox="0 0 16 16">
+                            <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+                        </svg>
+                        <span>${fileName}</span>
+                    `;
+                    item.classList.add('success');
+                } else {
+                    item.innerHTML = `
+                        <svg class="icon" viewBox="0 0 16 16">
+                            <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8 4a.905.905 0 0 0-.9.995l.35 3.507a.552.552 0 0 0 1.1 0l.35-3.507A.905.905 0 0 0 8 4zm.002 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+                        </svg>
+                        <span>${fileName}</span>
+                    `;
+                    item.classList.add('error');
+                }
+            }
+        }
+
+        // Hide upload progress
+        function hideUploadProgress() {
+            const progress = document.getElementById('upload-progress');
+            const fileList = document.getElementById('upload-file-list');
+            
+            if (progress) {
+                progress.remove();
+            }
+            
+            if (fileList) {
+                fileList.remove();
+            }
+        }
+
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // Prevent default drag behaviors on document
+        document.addEventListener('dragenter', function(e) {
+            if (e.target.closest('#files')) {
+                return; // Let file manager handle it
+            }
+            
+            if (e.dataTransfer.types.includes('Files')) {
+                e.preventDefault();
+            }
+        }, false);
+
+        document.addEventListener('dragover', function(e) {
+            if (e.target.closest('#files')) {
+                return; // Let file manager handle it
+            }
+            
+            if (e.dataTransfer.types.includes('Files')) {
+                e.preventDefault();
+            }
+        }, false);
+
+        document.addEventListener('drop', function(e) {
+            if (e.target.closest('#files')) {
+                return; // Let file manager handle it
+            }
+            
+            if (e.dataTransfer.types.includes('Files')) {
+                e.preventDefault();
+            }
+        }, false);
+
         // ========== NAVIGATION ==========
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', function(e) {
@@ -1324,6 +1992,11 @@
             if (targetTab) targetTab.classList.add('active');
             
             if (tabName === 'system') document.getElementById('processes').classList.add('active');
+            
+            // Load data for specific tabs
+            if (tabName === 'connections') loadConnections();
+            if (tabName === 'services') loadServices();
+            if (tabName === 'sessions') loadSessions();
         }
 
         // ========== UTILITIES ==========
@@ -1414,17 +2087,204 @@
         }
 
         async function killProc(pid, name) {
-            if (!confirm('Kill ' + name + '?')) return;
-            const r = await (await fetch('/api/kill/' + pid, {method: 'POST'})).json();
-            alert(r.message);
-            loadProcesses();
+            // Show confirmation dialog with process name and PID
+            if (!confirm(`Are you sure you want to kill process "${name}" (PID: ${pid})?`)) {
+                return;
+            }
+
+            // Disable kill button and show loading state
+            const killButton = document.querySelector(`button[onclick="killProc(${pid},'${name}')"]`);
+            if (killButton) {
+                killButton.disabled = true;
+                killButton.innerHTML = '<svg class="icon animate-spin" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>';
+            }
+
+            try {
+                const response = await fetch('/api/kill/' + pid, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'ok') {
+                    showSuccess(`Process ${name} (PID: ${pid}) killed successfully`);
+                    
+                    // Refresh process list after a short delay
+                    setTimeout(() => {
+                        loadProcesses();
+                    }, 500);
+                } else {
+                    showError(`Failed to kill process: ${data.message || 'Unknown error'}`);
+                    
+                    // Re-enable button
+                    if (killButton) {
+                        killButton.disabled = false;
+                        const killIcon = '<svg class="icon" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>';
+                        killButton.innerHTML = killIcon;
+                    }
+                }
+            } catch (error) {
+                showError(`Error killing process: ${error.message}`);
+                
+                // Re-enable button
+                if (killButton) {
+                    killButton.disabled = false;
+                    const killIcon = '<svg class="icon" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>';
+                    killButton.innerHTML = killIcon;
+                }
+            }
         }
 
         function refreshAll() {
             const btn = document.querySelector('.refresh-btn');
             btn.classList.add('spinning');
-            Promise.all([loadSystem(), loadProcesses(), loadPorts(), loadNetwork(), loadFiles()])
+            Promise.all([loadSystem(), loadProcesses(), loadPorts(), loadNetwork(), loadFiles(), loadConnections(), loadServices(), loadSessions()])
                 .finally(() => setTimeout(() => btn.classList.remove('spinning'), 500));
+        }
+
+        // ========== NETWORK CONNECTIONS ==========
+        async function loadConnections() {
+            try {
+                const data = await (await fetch('/api/connections')).json();
+                const filter = document.getElementById('conn-search')?.value?.toLowerCase() || '';
+                const statusFilter = document.getElementById('conn-status-filter')?.value || '';
+                
+                let filtered = data;
+                if (filter) {
+                    filtered = filtered.filter(c => 
+                        c.local_addr?.toLowerCase().includes(filter) ||
+                        c.remote_addr?.toLowerCase().includes(filter) ||
+                        c.process?.toLowerCase().includes(filter) ||
+                        String(c.local_port).includes(filter) ||
+                        String(c.remote_port).includes(filter)
+                    );
+                }
+                if (statusFilter) {
+                    filtered = filtered.filter(c => c.status === statusFilter);
+                }
+                
+                document.getElementById('connections-list').innerHTML = filtered.length === 0 
+                    ? '<div style="padding: 20px; text-align: center; color: var(--text-muted);">No connections found</div>'
+                    : filtered.slice(0, 200).map(c => `
+                    <div class="process-item" style="grid-template-columns: 60px 1fr 80px 1fr 100px;">
+                        <span style="color: var(--accent-blue); font-weight: 500;">${c.protocol}</span>
+                        <span style="font-family: monospace; font-size: 12px;">${c.local_addr || '*'}:${c.local_port}</span>
+                        <span style="color: var(--text-muted);">→</span>
+                        <span style="font-family: monospace; font-size: 12px;">${c.remote_addr || '*'}:${c.remote_port || '-'}</span>
+                        <span class="badge ${c.status === 'ESTABLISHED' ? 'badge-green' : c.status === 'LISTEN' ? 'badge-blue' : 'badge-gray'}">${c.status || 'NONE'}</span>
+                        <span style="color: var(--text-secondary); font-size: 12px;">${c.process || ('PID:' + c.pid)}</span>
+                    </div>
+                `).join('');
+            } catch (e) {
+                document.getElementById('connections-list').innerHTML = '<div style="padding: 20px; text-align: center; color: var(--accent-red);">Failed to load connections</div>';
+            }
+        }
+        
+        document.getElementById('conn-search')?.addEventListener('input', loadConnections);
+
+        // ========== SYSTEMD SERVICES ==========
+        async function loadServices() {
+            try {
+                const res = await (await fetch('/api/services')).json();
+                if (res.status === 'error') {
+                    document.getElementById('services-list').innerHTML = `<div style="padding: 20px; text-align: center; color: var(--accent-red);">${res.message}</div>`;
+                    return;
+                }
+                
+                const filter = document.getElementById('service-search')?.value?.toLowerCase() || '';
+                const stateFilter = document.getElementById('service-state-filter')?.value || '';
+                
+                let services = res.services || [];
+                if (filter) {
+                    services = services.filter(s => 
+                        s.name?.toLowerCase().includes(filter) ||
+                        s.description?.toLowerCase().includes(filter)
+                    );
+                }
+                if (stateFilter) {
+                    services = services.filter(s => s.active_state === stateFilter);
+                }
+                
+                document.getElementById('services-list').innerHTML = services.length === 0 
+                    ? '<div style="padding: 20px; text-align: center; color: var(--text-muted);">No services found</div>'
+                    : services.map(s => `
+                    <div class="process-item" style="grid-template-columns: 1fr 80px 80px auto;">
+                        <div>
+                            <div style="font-weight: 500;">${s.name}</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">${s.description || ''}</div>
+                        </div>
+                        <span class="badge ${s.active_state === 'active' ? 'badge-green' : s.active_state === 'failed' ? 'badge-red' : 'badge-gray'}">${s.active_state}</span>
+                        <span style="color: var(--text-secondary); font-size: 12px;">${s.sub_state}</span>
+                        <div style="display: flex; gap: 4px;">
+                            ${s.active_state === 'active' ? `
+                                <button class="btn-action btn-sm" onclick="controlService('${s.name}', 'restart')" title="Restart">
+                                    <svg class="icon icon-sm" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
+                                </button>
+                                <button class="btn-action btn-sm" onclick="controlService('${s.name}', 'stop')" title="Stop" style="color: var(--accent-red);">
+                                    <svg class="icon icon-sm" viewBox="0 0 16 16"><path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5z"/></svg>
+                                </button>
+                            ` : `
+                                <button class="btn-action btn-sm" onclick="controlService('${s.name}', 'start')" title="Start" style="color: var(--accent-green);">
+                                    <svg class="icon icon-sm" viewBox="0 0 16 16"><path d="M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/></svg>
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                document.getElementById('services-list').innerHTML = '<div style="padding: 20px; text-align: center; color: var(--accent-red);">Failed to load services</div>';
+            }
+        }
+        
+        document.getElementById('service-search')?.addEventListener('input', loadServices);
+
+        async function controlService(name, action) {
+            if (!confirm(`Are you sure you want to ${action} service "${name}"?`)) return;
+            try {
+                const res = await (await fetch(`/api/services/${name}/${action}`, { method: 'POST' })).json();
+                if (res.status === 'ok') {
+                    showSuccess(res.message);
+                    setTimeout(loadServices, 1000);
+                } else {
+                    showError(res.message || 'Failed to control service');
+                }
+            } catch (e) {
+                showError('Error controlling service: ' + e.message);
+            }
+        }
+
+        // ========== USER SESSIONS ==========
+        async function loadSessions() {
+            try {
+                const res = await (await fetch('/api/sessions')).json();
+                if (res.status === 'error') {
+                    document.getElementById('sessions-list').innerHTML = `<div style="padding: 20px; text-align: center; color: var(--accent-red);">${res.message}</div>`;
+                    return;
+                }
+                
+                const sessions = res.sessions || [];
+                document.getElementById('sessions-list').innerHTML = sessions.length === 0 
+                    ? '<div style="padding: 20px; text-align: center; color: var(--text-muted);">No active sessions</div>'
+                    : sessions.map(s => `
+                    <div class="process-item" style="grid-template-columns: 100px 80px 1fr 100px 80px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <svg class="icon icon-sm" style="color: var(--accent-green);" viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></svg>
+                            <span style="font-weight: 500;">${s.user}</span>
+                        </div>
+                        <span style="font-family: monospace; color: var(--accent-blue);">${s.tty}</span>
+                        <span style="color: var(--text-secondary); font-size: 12px;">${s.host || 'local'}</span>
+                        <span style="color: var(--text-muted); font-size: 12px;">${s.login_time}</span>
+                        <span style="color: ${s.idle === '.' ? 'var(--accent-green)' : 'var(--text-muted)'}; font-size: 12px;">
+                            ${s.idle === '.' ? 'Active' : 'Idle: ' + s.idle}
+                        </span>
+                    </div>
+                `).join('');
+            } catch (e) {
+                document.getElementById('sessions-list').innerHTML = '<div style="padding: 20px; text-align: center; color: var(--accent-red);">Failed to load sessions</div>';
+            }
         }
 
         // ========== PROCESS SEARCH ==========
@@ -1459,8 +2319,10 @@
                 document.getElementById('files-list').innerHTML = d.files.map(f => {
                     const icon = f.is_dir ? folderIcon : fileIcon;
                     const isEditable = !f.is_dir && isEditableFile(f.name);
+                    const isExample = f.name.toLowerCase().endsWith('.example');
+                    const exampleClass = isExample ? 'example-file' : '';
                     return `
-                        <div class="file-item">
+                        <div class="file-item ${exampleClass}">
                             ${icon}
                             <div class="file-info">
                                 <div class="file-name">${f.name}</div>
@@ -1545,21 +2407,21 @@
             clipboardFile = path;
             clipboardMode = 'copy';
             document.getElementById('pasteBtn').style.display = 'inline-flex';
-            alert('Copied: ' + path + '\n\nGo to destination folder and click Paste');
+            showSuccess('Copied: ' + path + '\n\nGo to destination folder and click Paste');
         }
 
         function cutFile(path) {
             clipboardFile = path;
             clipboardMode = 'cut';
             document.getElementById('pasteBtn').style.display = 'inline-flex';
-            alert('Cut: ' + path + '\n\nGo to destination folder and click Paste');
+            showInfo('Cut: ' + path + '\n\nGo to destination folder and click Paste');
         }
 
         async function pasteFile() {
             if (!clipboardFile) return;
             const filename = clipboardFile.split('/').pop();
             const dest = currentPath + '/' + filename;
-            if (clipboardFile === dest) { alert('Source and destination are the same'); return; }
+            if (clipboardFile === dest) { showError('Source and destination are the same'); return; }
             const action = clipboardMode === 'cut' ? 'move' : 'copy';
             
             try {
@@ -1570,15 +2432,28 @@
                 });
                 const data = await r.json();
                 if (data.status === 'ok') {
-                    alert((clipboardMode === 'cut' ? 'Moved' : 'Copied') + ' successfully!');
+                    showSuccess((clipboardMode === 'cut' ? 'Moved' : 'Copied') + ' successfully!');
                     clipboardFile = null;
                     clipboardMode = null;
                     document.getElementById('pasteBtn').style.display = 'none';
                     loadFiles();
                 } else {
-                    alert('Error: ' + data.message);
+                    showError('Error: ' + data.message);
                 }
-            } catch (e) { alert('Error: ' + e.message); }
+            } catch (e) { showError('Error: ' + e.message); }
+        }
+
+        async function uploadFile(input) {
+            if (!input.files || input.files.length === 0) return;
+            
+            const fileArray = Array.from(input.files);
+            const currentDir = getCurrentDirectory();
+            
+            // Use the new drag-drop upload system
+            await uploadFiles(fileArray);
+            
+            // Reset input
+            input.value = '';
         }
 
         async function deleteFile(path, isDir) {
@@ -1586,9 +2461,9 @@
             if (!confirm('Are you sure you want to delete this ' + type + '?\n\n' + path)) return;
             try {
                 const r = await (await fetch('/api/files/delete/' + encodeURIComponent(path), {method: 'DELETE'})).json();
-                if (r.status === 'ok') { alert('Deleted successfully'); loadFiles(); }
-                else { alert('Error: ' + r.message); }
-            } catch (e) { alert('Failed to delete'); }
+                if (r.status === 'ok') { showSuccess('Deleted successfully'); loadFiles(); }
+                else { showError('Error: ' + r.message); }
+            } catch (e) { showError('Failed to delete'); }
         }
 
         function refreshFiles() { loadFiles(); }
@@ -1596,7 +2471,7 @@
         function isEditableFile(filename) {
             const editableExts = ['.json', '.env', '.txt', '.xml', '.yml', '.yaml', 
                                   '.md', '.js', '.go', '.py', '.sql', '.html', '.css', 
-                                  '.conf', '.ini', '.toml', '.sh', '.log'];
+                                  '.conf', '.ini', '.toml', '.sh', '.log', '.example'];
             return editableExts.some(ext => filename.toLowerCase().endsWith(ext));
         }
 
