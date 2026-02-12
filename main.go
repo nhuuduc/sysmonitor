@@ -798,7 +798,7 @@ func main() {
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": "File moved"})
 	}))).Methods("POST")
 	
-	// Kill process endpoint - improved with better error handling and verification
+	// Kill process endpoint - improved with systemd detection and proper stop
 	r.HandleFunc("/api/kill/{pid}", rateLimitMiddleware(rateLimiter, authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		vars := mux.Vars(r)
@@ -830,6 +830,63 @@ func main() {
 			return
 		}
 		
+		// Check if process is managed by systemd - detect by checking cgroup
+		cgroupPath := fmt.Sprintf("/proc/%d/cgroup", pid)
+		cgroupData, err := os.ReadFile(cgroupPath)
+		var serviceName string
+		if err == nil {
+			cgroupStr := string(cgroupData)
+			// Look for systemd service pattern like /system.slice/ollama.service
+			if strings.Contains(cgroupStr, ".service") {
+				lines := strings.Split(cgroupStr, "\n")
+				for _, line := range lines {
+					if idx := strings.Index(line, "/system.slice/"); idx != -1 {
+						rest := line[idx+len("/system.slice/"):]
+						if svcEnd := strings.Index(rest, ".service"); svcEnd != -1 {
+							serviceName = rest[:svcEnd+len(".service")]
+							break
+						}
+					}
+					// Also check for user services
+					if idx := strings.Index(line, ".service"); idx != -1 {
+						parts := strings.Split(line, "/")
+						for _, part := range parts {
+							if strings.HasSuffix(part, ".service") {
+								serviceName = part
+								break
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		// If it's a systemd service, use systemctl stop instead
+		if serviceName != "" {
+			cmd := exec.Command("systemctl", "stop", serviceName)
+			err := cmd.Run()
+			if err != nil {
+				json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": fmt.Sprintf("Failed to stop service %s: %v", serviceName, err)})
+				return
+			}
+			
+			// Wait and verify
+			time.Sleep(500 * time.Millisecond)
+			
+			// Check if service is stopped
+			checkCmd := exec.Command("systemctl", "is-active", serviceName)
+			output, _ := checkCmd.Output()
+			if strings.TrimSpace(string(output)) != "active" {
+				auditLog("SERVICE_STOP", fmt.Sprintf("Service=%s, PID=%d, Name=%s", serviceName, pid, name), getCurrentUser(r))
+				json.NewEncoder(w).Encode(map[string]string{"status": "ok", "message": fmt.Sprintf("Service %s stopped (was PID: %d)", serviceName, pid)})
+				return
+			}
+			
+			json.NewEncoder(w).Encode(map[string]string{"status": "error", "message": fmt.Sprintf("Service %s may still be running", serviceName)})
+			return
+		}
+		
+		// Not a systemd service - use regular kill
 		// Try SIGTERM first (graceful)
 		err = syscall.Kill(pid, syscall.SIGTERM)
 		if err != nil {
